@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes order-row-blink {
+    0%,
+    100% {
+        background-color: transparent;
+    }
+    50% {
+        background-color: rgba(34, 197, 94, 0.35);
+    }
+}
+
+.order-row-blink {
+    animation: order-row-blink 0.55s ease-in-out 4;
+}
