@@ -31,6 +31,7 @@ class NewOrderCreated implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         $this->order->loadMissing(['table', 'items.menuItem']);
+        $tableNumber = $this->order->table->table_number;
 
         return [
             'order' => [
@@ -47,6 +48,7 @@ class NewOrderCreated implements ShouldBroadcastNow
                     'menu_item' => ['name' => $item->menuItem->name],
                 ])->all(),
             ],
+            'announcement_text' => "Table {$tableNumber} order placed",
         ];
     }
 }

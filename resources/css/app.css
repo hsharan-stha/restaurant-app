@@ -15,3 +15,340 @@
 .order-row-blink {
     animation: order-row-blink 0.55s ease-in-out 4;
 }
+
+.hotpepper-shell {
+    --hp-orange: #e74f1d;
+    --hp-orange-deep: #c93f14;
+    --hp-cream: #fff7f2;
+    --hp-cream-strong: #fff0e6;
+}
+
+.hotpepper-hero {
+    background:
+        radial-gradient(circle at top left, rgba(255, 173, 92, 0.34), transparent 32%),
+        radial-gradient(circle at top right, rgba(231, 79, 29, 0.18), transparent 28%),
+        linear-gradient(180deg, #fff8f4 0%, #fff1e7 100%);
+}
+
+.hotpepper-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    background: rgba(231, 79, 29, 0.12);
+    color: var(--hp-orange);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    padding: 0.5rem 0.85rem;
+    text-transform: uppercase;
+}
+
+.hotpepper-pill,
+.hotpepper-tab,
+.hotpepper-tab-accent,
+.hotpepper-stepper-btn,
+.hotpepper-add-btn {
+    transition: all 160ms ease;
+}
+
+.hotpepper-pill {
+    border: 1px solid rgba(231, 79, 29, 0.14);
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #7c2d12;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.55rem 0.9rem;
+}
+
+.hotpepper-summary-card,
+.hotpepper-cart-card,
+.hotpepper-menu-card,
+.hotpepper-stat-card,
+.hotpepper-category-panel {
+    border: 1px solid rgba(251, 146, 60, 0.18);
+    border-radius: 1.75rem;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 24px 60px -34px rgba(194, 65, 12, 0.35);
+}
+
+.hotpepper-summary-card {
+    min-width: 280px;
+    padding: 1.5rem;
+}
+
+.hotpepper-stat-card {
+    padding: 1rem 1.1rem;
+}
+
+.hotpepper-category-panel {
+    padding: 1.2rem;
+}
+
+.hotpepper-stat-label {
+    color: #9a3412;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.hotpepper-stat-value {
+    color: #0f172a;
+    font-size: 1.1rem;
+    font-weight: 900;
+    margin-top: 0.45rem;
+}
+
+.hotpepper-tab {
+    border: 1px solid #fed7aa;
+    border-radius: 9999px;
+    background: white;
+    color: #9a3412;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.75rem 1rem;
+    white-space: nowrap;
+}
+
+.hotpepper-tab:hover,
+.hotpepper-tab-accent {
+    border-color: var(--hp-orange);
+    background: #fff1e7;
+    color: var(--hp-orange-deep);
+}
+
+.hotpepper-menu-card {
+    padding: 1rem;
+}
+
+.hotpepper-menu-thumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 5rem;
+    width: 5rem;
+    height: 5rem;
+    border-radius: 1.25rem;
+    background: linear-gradient(135deg, #fdba74, #fb7185);
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 900;
+    overflow: hidden;
+}
+
+.hotpepper-chip {
+    align-items: center;
+    background: #fff1e7;
+    border: 1px solid #fed7aa;
+    border-radius: 9999px;
+    color: #9a3412;
+    display: inline-flex;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 0.35rem 0.65rem;
+    text-transform: uppercase;
+}
+
+.hotpepper-chip-live {
+    background: #ecfdf5;
+    border-color: #86efac;
+    color: #166534;
+}
+
+.hotpepper-step-index {
+    align-items: center;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    border-radius: 9999px;
+    color: white;
+    display: inline-flex;
+    flex: 0 0 1.7rem;
+    font-size: 0.75rem;
+    font-weight: 900;
+    height: 1.7rem;
+    justify-content: center;
+    width: 1.7rem;
+}
+
+.hotpepper-stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    border: 1px solid #fed7aa;
+    border-radius: 9999px;
+    background: #fff7f2;
+    padding: 0.4rem 0.8rem;
+}
+
+.hotpepper-stepper-btn {
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 9999px;
+    background: white;
+    color: #9a3412;
+    font-weight: 900;
+}
+
+.hotpepper-stepper-btn:disabled,
+.hotpepper-add-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.hotpepper-add-btn {
+    border-radius: 9999px;
+    background: var(--hp-orange);
+    color: white;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 0.75rem 1rem;
+    text-transform: uppercase;
+}
+
+.hotpepper-add-btn:hover:not(:disabled),
+.hotpepper-stepper-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.hotpepper-cart-card {
+    padding: 1.5rem;
+}
+
+.hotpepper-mobile-bar {
+    align-items: center;
+    backdrop-filter: blur(18px);
+    background: rgba(255, 255, 255, 0.94);
+    border-top: 1px solid rgba(251, 146, 60, 0.22);
+    bottom: 0;
+    box-shadow: 0 -18px 40px -28px rgba(15, 23, 42, 0.45);
+    display: flex;
+    justify-content: space-between;
+    left: 0;
+    padding: 0.9rem 1rem calc(0.9rem + env(safe-area-inset-bottom, 0px));
+    position: fixed;
+    right: 0;
+    z-index: 40;
+}
+
+.hotpepper-mobile-side-btn {
+    align-items: flex-start;
+    background: white;
+    border: 1px solid rgba(251, 146, 60, 0.28);
+    border-radius: 1.1rem;
+    color: #0f172a;
+    display: inline-flex;
+    flex-direction: column;
+    padding: 0.75rem 0.95rem;
+}
+
+.hotpepper-mobile-bar-btn {
+    align-items: center;
+    background: #e74f1d;
+    border-radius: 9999px;
+    color: white;
+    display: inline-flex;
+    font-size: 0.82rem;
+    font-weight: 900;
+    gap: 0.65rem;
+    letter-spacing: 0.08em;
+    padding: 0.9rem 1.1rem;
+    text-transform: uppercase;
+}
+
+.hotpepper-mobile-overlay {
+    background: rgba(15, 23, 42, 0.45);
+    bottom: 0;
+    left: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 45;
+}
+
+.hotpepper-mobile-drawer {
+    background: #fffaf6;
+    bottom: 0;
+    max-width: 88vw;
+    position: fixed;
+    top: 0;
+    transition: transform 180ms ease;
+    width: 21rem;
+    z-index: 50;
+}
+
+.hotpepper-mobile-drawer-left {
+    left: 0;
+    transform: translateX(-100%);
+}
+
+.hotpepper-mobile-drawer-right {
+    right: 0;
+    transform: translateX(100%);
+}
+
+.hotpepper-mobile-drawer.is-open {
+    transform: translateX(0);
+}
+
+.hotpepper-drawer-close {
+    border: 1px solid #fed7aa;
+    border-radius: 9999px;
+    color: #9a3412;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 0.55rem 0.85rem;
+    text-transform: uppercase;
+}
+
+.hotpepper-drawer-link {
+    align-items: center;
+    background: white;
+    border: 1px solid rgba(251, 146, 60, 0.2);
+    border-radius: 1rem;
+    color: #0f172a;
+    display: flex;
+    font-weight: 700;
+    justify-content: space-between;
+    padding: 0.95rem 1rem;
+}
+
+@media (max-width: 639px) {
+    .hotpepper-summary-card,
+    .hotpepper-cart-card,
+    .hotpepper-menu-card,
+    .hotpepper-stat-card {
+        border-radius: 1.35rem;
+    }
+
+    .hotpepper-summary-card,
+    .hotpepper-cart-card {
+        padding: 1.15rem;
+    }
+
+    .hotpepper-menu-card {
+        padding: 0.9rem;
+    }
+
+    .hotpepper-menu-thumb {
+        border-radius: 1rem;
+        height: 4.8rem;
+        width: 4.8rem;
+    }
+
+    .hotpepper-tab {
+        padding: 0.68rem 0.9rem;
+    }
+
+    .hotpepper-stepper {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .hotpepper-stepper-btn {
+        height: 2rem;
+        width: 2rem;
+    }
+}

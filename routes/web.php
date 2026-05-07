@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CustomerOrderingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DiningTableController;
 use App\Http\Controllers\InvoiceController;
@@ -12,6 +13,10 @@ use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('login'));
+
+Route::get('guest/t/{table:qr_token}', [CustomerOrderingController::class, 'enter'])->name('guest.entry');
+Route::get('guest/menu', [CustomerOrderingController::class, 'menu'])->name('guest.menu');
+Route::post('guest/orders', [CustomerOrderingController::class, 'store'])->name('guest.orders.store');
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])->name('register');

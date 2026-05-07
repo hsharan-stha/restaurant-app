@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\OrderStatus;
 use App\Enums\TableStatus;
 use App\Events\NewOrderCreated;
+use App\Models\CustomerSession;
 use App\Models\DiningTable;
 use App\Models\Invoice;
 use App\Models\MenuItem;
@@ -24,17 +25,37 @@ class OrderService
      */
     public function createOrder(int $tableId, array $lines): Order
     {
-        return DB::transaction(function () use ($tableId, $lines) {
+        return $this->createOrAppendOrder($tableId, $lines);
+    }
+
+    /**
+     * @param  array<int, array{menu_item_id: int, quantity: int}>  $lines
+     */
+    public function createOrAppendOrder(int $tableId, array $lines, ?CustomerSession $customerSession = null): Order
+    {
+        return DB::transaction(function () use ($customerSession, $tableId, $lines) {
             $table = DiningTable::query()->lockForUpdate()->findOrFail($tableId);
-            if ($table->status !== TableStatus::Available) {
-                throw new \InvalidArgumentException('This table is not available.');
+            $activeOrder = Order::query()
+                ->where('table_id', $tableId)
+                ->whereIn('status', [OrderStatus::Pending->value, OrderStatus::Preparing->value])
+                ->latest('id')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $activeOrder && $table->status !== TableStatus::Available) {
+                throw new \InvalidArgumentException('This table is not accepting new guest orders right now.');
             }
 
-            $order = $this->orderRepository->create([
+            $order = $activeOrder ?: $this->orderRepository->create([
                 'table_id' => $tableId,
+                'customer_session_id' => $customerSession?->id,
                 'status' => OrderStatus::Pending,
                 'total_amount' => 0,
             ]);
+
+            if ($customerSession && ! $order->customer_session_id) {
+                $order->update(['customer_session_id' => $customerSession->id]);
+            }
 
             foreach ($lines as $line) {
                 $menuItem = MenuItem::query()->findOrFail($line['menu_item_id']);
@@ -52,7 +73,7 @@ class OrderService
 
             $order->load(['table', 'items.menuItem']);
 
-            event(new NewOrderCreated($order));
+            rescue(fn () => event(new NewOrderCreated($order)), report: false);
 
             return $order;
         });
@@ -65,6 +86,10 @@ class OrderService
 
             if ($status === OrderStatus::Completed && ! $order->invoice) {
                 $this->createInvoiceForOrder($order->fresh(['items.menuItem']));
+            }
+
+            if ($status === OrderStatus::Completed) {
+                $order->table()->update(['status' => TableStatus::Available]);
             }
 
             return $order->fresh(['table', 'items.menuItem', 'invoice', 'payments']);

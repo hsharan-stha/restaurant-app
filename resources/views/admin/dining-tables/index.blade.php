@@ -13,6 +13,9 @@
                 <tr>
                     <th class="px-4 py-3">Number</th>
                     <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">QR code</th>
+                    <th class="px-4 py-3">QR token</th>
+                    <th class="px-4 py-3">Customer link</th>
                     <th class="px-4 py-3"></th>
                 </tr>
             </thead>
@@ -24,6 +27,30 @@
                             <span class="rounded-full px-2 py-0.5 text-xs {{ $table->status->value === 'available' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300' }}">
                                 {{ $table->status->value }}
                             </span>
+                        </td>
+                        <td class="px-4 py-3 align-top">
+                            <div class="inline-flex rounded-2xl bg-white p-3">
+                                <div class="h-32 w-32 [&>svg]:h-full [&>svg]:w-full">
+                                    {!! $table->customer_qr_svg !!}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="max-w-xs">
+                                <code class="block overflow-x-auto rounded-lg bg-slate-950 px-3 py-2 text-xs text-slate-200">
+                                    {{ $table->qr_token }}
+                                </code>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="max-w-xs space-y-2">
+                                <a href="{{ $table->customer_entry_url }}" target="_blank" class="text-emerald-400 hover:underline">
+                                    Open guest menu
+                                </a>
+                                <code class="block overflow-x-auto rounded-lg bg-slate-950 px-3 py-2 text-xs text-slate-200">
+                                    {{ $table->customer_entry_url }}
+                                </code>
+                            </div>
                         </td>
                         <td class="px-4 py-3 text-right">
                             <a href="{{ route('dining-tables.edit', $table) }}" class="text-emerald-400 hover:underline">Edit</a>
