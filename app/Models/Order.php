@@ -15,6 +15,7 @@ class Order extends Model
         'customer_session_id',
         'status',
         'total_amount',
+        'checkout_requested_at',
     ];
 
     protected function casts(): array
@@ -22,6 +23,7 @@ class Order extends Model
         return [
             'status' => OrderStatus::class,
             'total_amount' => 'decimal:2',
+            'checkout_requested_at' => 'datetime',
         ];
     }
 

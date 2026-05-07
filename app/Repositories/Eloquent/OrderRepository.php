@@ -4,6 +4,7 @@ namespace App\Repositories\Eloquent;
 
 use App\Models\Order;
 use App\Repositories\Contracts\OrderRepositoryInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 class OrderRepository implements OrderRepositoryInterface
@@ -20,6 +21,28 @@ class OrderRepository implements OrderRepositoryInterface
         return Order::query()
             ->with(['table', 'items.menuItem', 'invoice', 'payments'])
             ->orderByDesc('id')
+            ->get();
+    }
+
+    public function newerThanId(int $lastSeenId): Collection
+    {
+        return Order::query()
+            ->with(['table', 'items.menuItem', 'invoice', 'payments'])
+            ->where('id', '>', $lastSeenId)
+            ->orderBy('id')
+            ->get();
+    }
+
+    public function checkoutRequestedAfter(?string $lastSeenCheckoutAt): Collection
+    {
+        return Order::query()
+            ->with(['table', 'items.menuItem', 'invoice', 'payments'])
+            ->whereNotNull('checkout_requested_at')
+            ->when(
+                $lastSeenCheckoutAt,
+                fn (Builder $query) => $query->where('checkout_requested_at', '>', $lastSeenCheckoutAt)
+            )
+            ->orderBy('checkout_requested_at')
             ->get();
     }
 

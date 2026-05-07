@@ -6,13 +6,8 @@
     <div class="hotpepper-shell pb-28 lg:pb-10">
         <section class="hotpepper-hero">
             <div class="mx-auto max-w-6xl px-4 pb-6 pt-5 sm:px-6 lg:px-8">
-                <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
+                <div class="space-y-4">
                     <div class="space-y-4">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span class="hotpepper-kicker">Mobile order</span>
-                            <span class="hotpepper-chip hotpepper-chip-live">Session live</span>
-                        </div>
-
                         <div>
                             <p class="text-sm font-semibold uppercase tracking-[0.22em] text-orange-600">Welcome to your table</p>
                             <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Table {{ $table->table_number }}</h1>
@@ -32,28 +27,11 @@
                             </div>
                             <div class="hotpepper-stat-card">
                                 <p class="hotpepper-stat-label">Current total</p>
-                                <p class="hotpepper-stat-value">{{ $activeOrder ? '$'.number_format((float) $activeOrder->total_amount, 2) : '$0.00' }}</p>
+                                <p class="hotpepper-stat-value">{{ $activeOrder ? '¥'.number_format((float) $activeOrder->total_amount, 0) : '¥0' }}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="hotpepper-summary-card">
-                        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">How it works</p>
-                        <ol class="mt-4 space-y-3 text-sm text-slate-700">
-                            <li class="flex gap-3">
-                                <span class="hotpepper-step-index">1</span>
-                                <span>Open food categories from the left and jump fast.</span>
-                            </li>
-                            <li class="flex gap-3">
-                                <span class="hotpepper-step-index">2</span>
-                                <span>Add items as you browse the menu.</span>
-                            </li>
-                            <li class="flex gap-3">
-                                <span class="hotpepper-step-index">3</span>
-                                <span>Open your order from the right button and send it.</span>
-                            </li>
-                        </ol>
-                    </div>
                 </div>
             </div>
         </section>
@@ -66,6 +44,7 @@
                 <a href="#order-summary" class="hotpepper-tab hotpepper-tab-accent">My order</a>
             </div>
         </section>
+
 
         <div id="guest-mobile-overlay" class="hotpepper-mobile-overlay hidden lg:hidden"></div>
 
@@ -86,6 +65,49 @@
                 @endforeach
             </div>
         </aside>
+
+        @if($activeOrder)
+            <section class="mx-auto max-w-6xl px-4 pt-5 sm:px-6 lg:px-8">
+                <div class="hotpepper-cart-card">
+                    <div class="hotpepper-ticket-header">
+                        <div>
+                            <p class="hotpepper-ticket-kicker">Live ticket</p>
+                            <div class="mt-2 flex flex-wrap items-end gap-x-3 gap-y-2">
+                                <h2 class="hotpepper-ticket-title">Current order #{{ $activeOrder->id }}</h2>
+                                <span class="hotpepper-ticket-meta">Table {{ $table->table_number }}</span>
+                            </div>
+                        </div>
+                        <span class="hotpepper-ticket-status">{{ $activeOrder->status->value }}</span>
+                    </div>
+                    <div class="mt-4 flex gap-3 overflow-x-auto pb-1">
+                        <div class="min-w-[220px] rounded-2xl bg-orange-50 px-4 py-4">
+                            <p class="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">Current total</p>
+                            <p class="mt-2 text-3xl font-black text-slate-950">¥{{ number_format((float) $activeOrder->total_amount, 0) }}</p>
+                        </div>
+                        @foreach($activeOrder->items as $item)
+                            <div class="min-w-[280px] rounded-2xl bg-[#fff7f2] px-4 py-4">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="font-semibold text-slate-900">{{ $item->menuItem->name }}</p>
+                                        <p class="mt-1 text-sm text-slate-500">{{ $item->quantity }} x ¥{{ number_format((float) $item->price, 0) }}</p>
+                                    </div>
+                                    <p class="shrink-0 font-bold text-slate-950">¥{{ number_format((float) $item->price * (int) $item->quantity, 0) }}</p>
+                                </div>
+                                <div
+                                    class="mt-4 flex items-center justify-end gap-2"
+                                    data-reorder-id="{{ $item->menu_item_id }}"
+                                    data-reorder-name="{{ $item->menuItem->name }}"
+                                    data-reorder-price="{{ number_format((float) $item->price, 2, '.', '') }}"
+                                >
+                                    <button type="button" class="hotpepper-mini-reorder-btn" data-reorder-decrease>-1</button>
+                                    <button type="button" class="hotpepper-mini-reorder-btn" data-reorder-amount="1">+1</button>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </section>
+        @endif
 
         <div class="mx-auto grid max-w-6xl gap-6 px-4 py-5 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)_370px] lg:px-8">
             <aside class="hidden lg:block lg:sticky lg:top-24 lg:self-start">
@@ -143,7 +165,7 @@
                                                         Freshly prepared and ready to add to your table order.
                                                     </p>
                                                 </div>
-                                                <p class="shrink-0 text-lg font-black text-orange-600">${{ number_format((float) $item->price, 2) }}</p>
+                                                <p class="shrink-0 text-lg font-black text-orange-600">¥{{ number_format((float) $item->price, 0) }}</p>
                                             </div>
 
                                             <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -164,7 +186,8 @@
             </div>
 
             <aside id="order-summary" class="hidden lg:sticky lg:top-24 lg:block lg:self-start">
-                <div class="hotpepper-cart-card">
+                <div class="hotpepper-cart-card lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col">
+                    <div class="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs font-bold uppercase tracking-[0.25em] text-orange-500">My order</p>
@@ -190,7 +213,7 @@
                             </div>
                             <div class="flex items-center justify-between text-base">
                                 <span class="font-semibold text-slate-700">New order subtotal</span>
-                                <span class="text-2xl font-black text-slate-950" id="guest-cart-total">$0.00</span>
+                                <span class="text-2xl font-black text-slate-950" id="guest-cart-total">¥0</span>
                             </div>
                         </div>
 
@@ -204,36 +227,23 @@
                     </form>
 
                     @if($activeOrder)
-                        <div class="mt-8 border-t border-orange-100 pt-6">
-                            <div class="flex items-center justify-between gap-4">
-                                <div>
-                                    <p class="text-xs font-bold uppercase tracking-[0.25em] text-orange-500">Live ticket</p>
-                                    <h3 class="mt-1 text-lg font-black text-slate-950">Current order #{{ $activeOrder->id }}</h3>
-                                </div>
-                                <span class="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-white">{{ $activeOrder->status->value }}</span>
-                            </div>
-                            <div class="mt-4 space-y-3">
-                                @foreach($activeOrder->items as $item)
-                                    <div class="flex items-start justify-between gap-3 rounded-2xl bg-[#fff7f2] px-4 py-3">
-                                        <div>
-                                            <p class="font-semibold text-slate-900">{{ $item->menuItem->name }}</p>
-                                            <p class="text-sm text-slate-500">{{ $item->quantity }} x ${{ number_format((float) $item->price, 2) }}</p>
-                                        </div>
-                                        <p class="font-bold text-slate-950">${{ number_format((float) $item->price * (int) $item->quantity, 2) }}</p>
-                                    </div>
-                                @endforeach
-                            </div>
-                            <div class="mt-4 flex items-center justify-between border-t border-orange-100 pt-4">
-                                <span class="font-semibold text-slate-700">Current total</span>
-                                <span class="text-xl font-black text-slate-950">${{ number_format((float) $activeOrder->total_amount, 2) }}</span>
-                            </div>
-                        </div>
+                        <form method="POST" action="{{ route('guest.checkout') }}" class="mt-3">
+                            @csrf
+                            <button
+                                type="submit"
+                                class="w-full rounded-2xl border border-orange-300 bg-orange-50 px-5 py-4 text-sm font-bold uppercase tracking-[0.18em] text-orange-700 transition hover:bg-orange-100"
+                            >
+                                Proceed to checkout
+                            </button>
+                        </form>
                     @endif
+
+                    </div>
                 </div>
             </aside>
         </div>
 
-        <aside id="guest-order-drawer" class="hotpepper-mobile-drawer hotpepper-mobile-drawer-right lg:hidden">
+        <aside id="guest-order-drawer" class="hotpepper-mobile-drawer hotpepper-mobile-drawer-right flex flex-col lg:hidden">
             <div class="flex items-center justify-between border-b border-orange-100 px-5 py-4">
                 <div>
                     <p class="text-xs font-bold uppercase tracking-[0.22em] text-orange-500">Review</p>
@@ -241,7 +251,7 @@
                 </div>
                 <button type="button" data-close-drawer class="hotpepper-drawer-close">Close</button>
             </div>
-            <div class="px-4 py-4">
+            <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-28">
                 <div class="hotpepper-cart-card border-0 shadow-none">
                     <form method="POST" action="{{ route('guest.orders.store') }}" id="guest-order-form-mobile">
                         @csrf
@@ -259,7 +269,7 @@
                             </div>
                             <div class="flex items-center justify-between text-base">
                                 <span class="font-semibold text-slate-700">New order subtotal</span>
-                                <span class="text-2xl font-black text-slate-950" id="guest-cart-total-mobile">$0.00</span>
+                                <span class="text-2xl font-black text-slate-950" id="guest-cart-total-mobile">¥0</span>
                             </div>
                         </div>
 
@@ -271,6 +281,18 @@
                             Place order
                         </button>
                     </form>
+
+                    @if($activeOrder)
+                        <form method="POST" action="{{ route('guest.checkout') }}" class="mt-3">
+                            @csrf
+                            <button
+                                type="submit"
+                                class="w-full rounded-2xl border border-orange-300 bg-orange-50 px-5 py-4 text-sm font-bold uppercase tracking-[0.18em] text-orange-700 transition hover:bg-orange-100"
+                            >
+                                Proceed to checkout
+                            </button>
+                        </form>
+                    @endif
                 </div>
             </div>
         </aside>
@@ -281,7 +303,7 @@
                 <span class="mt-1 text-sm font-semibold text-slate-900">Food categories</span>
             </button>
             <button type="button" id="guest-open-order" class="hotpepper-mobile-bar-btn">
-                <span id="guest-cart-bar-total">$0.00</span>
+                <span id="guest-cart-bar-total">¥0</span>
                 <span>Order <span id="guest-cart-bar-count">0</span></span>
             </button>
         </div>
@@ -311,9 +333,40 @@
             const orderDrawer = document.getElementById('guest-order-drawer');
             const categoryToggle = document.getElementById('guest-open-category');
             const orderToggle = document.getElementById('guest-open-order');
+            const reorderGroups = () => document.querySelectorAll('[data-reorder-id]');
             const cart = new Map();
 
-            const currency = (amount) => `$${amount.toFixed(2)}`;
+            const currency = (amount) => `¥${Math.round(amount).toLocaleString('ja-JP')}`;
+
+            const addToCart = (id, name, price, quantityToAdd = 1) => {
+                const current = cart.get(id);
+                cart.set(id, {
+                    id,
+                    name,
+                    price: Number(price),
+                    quantity: (current?.quantity ?? 0) + quantityToAdd,
+                });
+                render();
+            };
+
+            const decreaseCartItem = (id) => {
+                const current = cart.get(id);
+
+                if (!current) {
+                    return;
+                }
+
+                if (current.quantity <= 1) {
+                    cart.delete(id);
+                } else {
+                    cart.set(id, {
+                        ...current,
+                        quantity: current.quantity - 1,
+                    });
+                }
+
+                render();
+            };
 
             const openDrawer = (drawer) => {
                 overlay?.classList.remove('hidden');
@@ -363,6 +416,10 @@
                             <div class="min-w-0">
                                 <p class="truncate font-semibold text-slate-900">${entry.name}</p>
                                 <p class="mt-1 text-sm text-slate-500">${entry.quantity} x ${currency(entry.price)}</p>
+                                <div class="mt-3 flex items-center gap-2">
+                                    <button type="button" class="hotpepper-cart-qty-btn" data-decrease-id="${entry.id}">-1</button>
+                                    <button type="button" class="hotpepper-cart-qty-btn" data-increase-id="${entry.id}" data-name="${entry.name}" data-price="${entry.price}">+1</button>
+                                </div>
                             </div>
                             <div class="text-right">
                                 <p class="font-bold text-slate-950">${currency(entry.quantity * entry.price)}</p>
@@ -386,6 +443,32 @@
                 });
             };
 
+            const bindCartRowActions = () => {
+                document.querySelectorAll('[data-remove-id]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        cart.delete(button.dataset.removeId);
+                        render();
+                    });
+                });
+
+                document.querySelectorAll('[data-decrease-id]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        decreaseCartItem(button.dataset.decreaseId);
+                    });
+                });
+
+                document.querySelectorAll('[data-increase-id]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        addToCart(
+                            button.dataset.increaseId,
+                            button.dataset.name,
+                            button.dataset.price,
+                            1
+                        );
+                    });
+                });
+            };
+
             const render = () => {
                 const entries = [...cart.values()];
                 let totalQuantity = 0;
@@ -406,13 +489,7 @@
                 barCountEl.textContent = String(totalQuantity);
                 barTotalEl.textContent = currency(totalAmount);
                 updateSubmitState(entries.length > 0);
-
-                document.querySelectorAll('[data-remove-id]').forEach((button) => {
-                    button.addEventListener('click', () => {
-                        cart.delete(button.dataset.removeId);
-                        render();
-                    });
-                });
+                bindCartRowActions();
             };
 
             menuCards.forEach((card) => {
@@ -443,18 +520,9 @@
                         return;
                     }
 
-                    const id = card.dataset.id;
-                    const current = cart.get(id);
-                    cart.set(id, {
-                        id,
-                        name: card.dataset.name,
-                        price: Number(card.dataset.price),
-                        quantity: (current?.quantity ?? 0) + quantity,
-                    });
-
+                    addToCart(card.dataset.id, card.dataset.name, card.dataset.price, quantity);
                     quantity = 0;
                     syncQuantity();
-                    render();
                 });
 
                 syncQuantity();
@@ -482,6 +550,25 @@
 
             document.querySelectorAll('[data-drawer-link]').forEach((link) => {
                 link.addEventListener('click', closeDrawers);
+            });
+
+            reorderGroups().forEach((container) => {
+                container.querySelectorAll('[data-reorder-decrease]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        decreaseCartItem(container.dataset.reorderId);
+                    });
+                });
+
+                container.querySelectorAll('[data-reorder-amount]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        addToCart(
+                            container.dataset.reorderId,
+                            container.dataset.reorderName,
+                            container.dataset.reorderPrice,
+                            Number(button.dataset.reorderAmount)
+                        );
+                    });
+                });
             });
 
             render();

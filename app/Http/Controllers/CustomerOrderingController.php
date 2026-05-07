@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
+use App\Events\CheckoutRequested;
 use App\Http\Requests\StoreCustomerOrderRequest;
 use App\Models\Category;
 use App\Models\CustomerSession;
@@ -82,6 +83,31 @@ class CustomerOrderingController extends Controller
         return redirect()
             ->route('guest.menu', ['ordered' => $order->id])
             ->with('status', 'Your order has been sent to the kitchen.');
+    }
+
+    public function proceedToCheckout(Request $request): RedirectResponse
+    {
+        $customerSession = $this->getActiveSession($request);
+        abort_unless($customerSession, 403, 'Guest session not found.');
+
+        $activeOrder = Order::query()
+            ->where('table_id', $customerSession->table_id)
+            ->whereIn('status', [OrderStatus::Pending->value, OrderStatus::Preparing->value])
+            ->latest('id')
+            ->first();
+
+        if (! $activeOrder) {
+            return redirect()->route('guest.menu')->withErrors([
+                'order' => 'There is no active order available for checkout.',
+            ]);
+        }
+
+        $activeOrder->update(['checkout_requested_at' => now()]);
+        $activeOrder->load('table');
+        $customerSession->update(['last_seen_at' => now()]);
+        rescue(fn () => event(new CheckoutRequested($activeOrder)), report: false);
+
+        return redirect()->route('guest.menu')->with('status', 'Checkout request sent to staff.');
     }
 
     protected function getActiveSession(Request $request): ?CustomerSession

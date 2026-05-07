@@ -3,11 +3,11 @@
     use App\Enums\PaymentStatus;
 @endphp
 
-<div class="rounded-xl border border-slate-800 bg-slate-900/60">
+<div class="flex max-h-[32rem] flex-col rounded-xl border border-slate-800 bg-slate-900/60 md:max-h-[38rem] lg:max-h-[calc(100vh-15rem)]">
     <div class="border-b border-slate-800 px-4 py-3">
         <h2 class="text-sm font-semibold uppercase tracking-wide {{ $titleClass }}">{{ $title }}</h2>
     </div>
-    <div class="divide-y divide-slate-800 p-2">
+    <div class="min-h-0 flex-1 overflow-y-auto divide-y divide-slate-800 p-2">
         @forelse($orders as $order)
             <article data-order-id="{{ $order->id }}" class="rounded-lg p-3 hover:bg-slate-800/40">
                 <div class="flex items-start justify-between gap-2">
@@ -18,7 +18,7 @@
                     </div>
                     <div class="flex flex-col items-end gap-1">
                         @include('partials.status-badge', ['status' => $order->status])
-                        <a href="{{ route('orders.show', $order) }}" class="text-xs text-slate-400 hover:text-white">Details →</a>
+                        <a href="{{ route('orders.show', $order) }}" class="text-xs text-slate-400 hover:text-white">Details ></a>
                     </div>
                 </div>
                 <div class="mt-3 flex flex-wrap gap-2">

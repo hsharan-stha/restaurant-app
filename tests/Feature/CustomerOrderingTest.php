@@ -97,4 +97,35 @@ class CustomerOrderingTest extends TestCase
         $this->assertDatabaseCount('orders', 1);
         $this->assertDatabaseCount('order_items', 2);
     }
+
+    public function test_guest_can_request_checkout_for_active_order(): void
+    {
+        $table = DiningTable::query()->create([
+            'table_number' => 5,
+            'status' => 'available',
+        ]);
+
+        $category = Category::query()->create(['name' => 'Dessert']);
+        $item = MenuItem::query()->create([
+            'name' => 'Parfait',
+            'price' => 7.00,
+            'category_id' => $category->id,
+        ]);
+
+        $this->get(route('guest.entry', $table));
+
+        $this->post(route('guest.orders.store'), [
+            'items' => [
+                ['menu_item_id' => $item->id, 'quantity' => 1],
+            ],
+        ]);
+
+        $this->post(route('guest.checkout'))
+            ->assertRedirect(route('guest.menu'));
+
+        $order = Order::query()->first();
+
+        $this->assertNotNull($order);
+        $this->assertNotNull($order->fresh()->checkout_requested_at);
+    }
 }

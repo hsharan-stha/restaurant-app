@@ -17,6 +17,7 @@ Route::get('/', fn () => redirect()->route('login'));
 Route::get('guest/t/{table:qr_token}', [CustomerOrderingController::class, 'enter'])->name('guest.entry');
 Route::get('guest/menu', [CustomerOrderingController::class, 'menu'])->name('guest.menu');
 Route::post('guest/orders', [CustomerOrderingController::class, 'store'])->name('guest.orders.store');
+Route::post('guest/checkout', [CustomerOrderingController::class, 'proceedToCheckout'])->name('guest.checkout');
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])->name('register');
@@ -29,8 +30,7 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
     Route::get('dashboard', DashboardController::class)->name('dashboard');
-
-    Route::get('payments/stripe/success', [PaymentController::class, 'stripeSuccess'])->name('payments.stripe.success');
+    Route::get('dashboard/poll', [DashboardController::class, 'poll'])->name('dashboard.poll');
 
     Route::middleware('role:admin,staff')->group(function () {
         Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');

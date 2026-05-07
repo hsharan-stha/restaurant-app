@@ -9,7 +9,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class NewOrderCreated implements ShouldBroadcastNow
+class CheckoutRequested implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -22,7 +22,7 @@ class NewOrderCreated implements ShouldBroadcastNow
 
     public function broadcastAs(): string
     {
-        return 'NewOrderCreated';
+        return 'CheckoutRequested';
     }
 
     /**
@@ -30,25 +30,19 @@ class NewOrderCreated implements ShouldBroadcastNow
      */
     public function broadcastWith(): array
     {
-        $this->order->loadMissing(['table', 'items.menuItem']);
+        $this->order->loadMissing(['table']);
         $tableNumber = $this->order->table->table_number;
 
         return [
             'order' => [
                 'id' => $this->order->id,
-                'status' => $this->order->status->value,
-                'total_amount' => (string) $this->order->total_amount,
                 'table' => [
                     'id' => $this->order->table->id,
-                    'table_number' => $this->order->table->table_number,
+                    'table_number' => $tableNumber,
                 ],
-                'items' => $this->order->items->map(fn ($item) => [
-                    'quantity' => $item->quantity,
-                    'price' => (string) $item->price,
-                    'menu_item' => ['name' => $item->menuItem->name],
-                ])->all(),
+                'checkout_requested_at' => $this->order->checkout_requested_at?->toIso8601String(),
             ],
-            'announcement_text' => "Order placed by table {$tableNumber}",
+            'announcement_text' => "Table number {$tableNumber} has requested checkout",
         ];
     }
 }

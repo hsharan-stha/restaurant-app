@@ -86,6 +86,48 @@
     padding: 1.2rem;
 }
 
+.hotpepper-ticket-header {
+    align-items: flex-start;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.hotpepper-ticket-kicker {
+    color: #ea580c;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.hotpepper-ticket-title {
+    color: #0f172a;
+    font-size: clamp(1.45rem, 1.2rem + 0.8vw, 2rem);
+    font-weight: 950;
+    letter-spacing: -0.03em;
+    line-height: 1;
+}
+
+.hotpepper-ticket-meta {
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding-bottom: 0.18rem;
+    text-transform: uppercase;
+}
+
+.hotpepper-ticket-status {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    border-radius: 9999px;
+    color: #fff;
+    font-size: 0.76rem;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    padding: 0.7rem 1rem;
+    text-transform: uppercase;
+}
+
 .hotpepper-stat-label {
     color: #9a3412;
     font-size: 0.72rem;
@@ -271,7 +313,10 @@
 .hotpepper-mobile-drawer {
     background: #fffaf6;
     bottom: 0;
+    display: flex;
+    flex-direction: column;
     max-width: 88vw;
+    min-height: 0;
     position: fixed;
     top: 0;
     transition: transform 180ms ease;
@@ -315,6 +360,16 @@
     padding: 0.95rem 1rem;
 }
 
+.hotpepper-mini-reorder-btn,
+.hotpepper-cart-qty-btn {
+    border: 1px solid #fdba74;
+    border-radius: 9999px;
+    color: #c2410c;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 0.42rem 0.7rem;
+}
+
 @media (max-width: 639px) {
     .hotpepper-summary-card,
     .hotpepper-cart-card,
@@ -330,6 +385,11 @@
 
     .hotpepper-menu-card {
         padding: 0.9rem;
+    }
+
+    .hotpepper-ticket-header {
+        align-items: flex-start;
+        flex-direction: column;
     }
 
     .hotpepper-menu-thumb {

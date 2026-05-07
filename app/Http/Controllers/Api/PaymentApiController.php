@@ -22,19 +22,8 @@ class PaymentApiController extends Controller
             return response()->json(['message' => 'Invoice not available.'], 422);
         }
 
-        $method = PaymentMethod::from($request->validated('method'));
-
         try {
-            if ($method === PaymentMethod::Online) {
-                if (! config('services.stripe.secret')) {
-                    return response()->json(['message' => 'Stripe not configured.'], 422);
-                }
-                $url = $this->paymentService->createStripeCheckoutSession($order);
-
-                return response()->json(['checkout_url' => $url]);
-            }
-
-            $payment = $this->paymentService->processLocalPayment($order, $method);
+            $payment = $this->paymentService->processLocalPayment($order, PaymentMethod::Cash);
 
             return response()->json($payment, 201);
         } catch (\Throwable $e) {
