@@ -14,12 +14,12 @@
             <div class="flex flex-wrap items-center gap-3 text-sm">
                 @auth
                     <a href="{{ route('dashboard') }}" class="text-slate-300 hover:text-white">Dashboard</a>
-                    <a href="{{ route('orders.create') }}" class="text-slate-300 hover:text-white">New order</a>
+                    <a href="{{ route('orders.create') }}" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:text-white">New order</a>
                     @if(auth()->user()->isAdmin())
                         <span class="hidden text-slate-600 sm:inline">|</span>
-                        <a href="{{ route('categories.index') }}" class="text-slate-300 hover:text-white">Categories</a>
-                        <a href="{{ route('menu-items.index') }}" class="text-slate-300 hover:text-white">Menu</a>
-                        <a href="{{ route('dining-tables.index') }}" class="text-slate-300 hover:text-white">Tables</a>
+                        <a href="{{ route('categories.index') }}" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:text-white">Categories</a>
+                        <a href="{{ route('menu-items.index') }}" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:text-white">Menu</a>
+                        <a href="{{ route('dining-tables.index') }}" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:text-white">Tables</a>
                     @endif
                     <span class="hidden text-slate-600 sm:inline">|</span>
                     <span class="text-slate-400">{{ auth()->user()->name }}</span>

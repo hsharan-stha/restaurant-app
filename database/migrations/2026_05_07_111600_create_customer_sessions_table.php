@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('guest_name')->nullable();
             $table->unsignedSmallInteger('party_size')->nullable();
             $table->timestamp('started_at');
-            $table->timestamp('last_seen_at');
+            $table->timestamp('last_seen_at')->nullable();
             $table->timestamp('closed_at')->nullable();
             $table->timestamps();
         });

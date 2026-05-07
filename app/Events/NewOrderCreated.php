@@ -48,7 +48,7 @@ class NewOrderCreated implements ShouldBroadcastNow
                     'menu_item' => ['name' => $item->menuItem->name],
                 ])->all(),
             ],
-            'announcement_text' => "Order placed by table {$tableNumber}",
+            'announcement_text' => "Table number {$tableNumber} has placed an order",
         ];
     }
 }

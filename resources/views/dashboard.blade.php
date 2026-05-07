@@ -11,6 +11,7 @@
     <div
         id="live-orders-dashboard"
         data-latest-checkout-request-at="{{ $latestCheckoutRequestAt ?? '' }}"
+        data-latest-order-item-id="{{ $latestOrderItemId ?? 0 }}"
     >
         <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -25,7 +26,7 @@
                 >
                     Enable voice alerts
                 </button>
-                <a href="{{ route('orders.create') }}" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500">New order</a>
+                <a href="{{ route('orders.create') }}" target="_blank" rel="noopener noreferrer" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500">New order</a>
             </div>
         </div>
 
