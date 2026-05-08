@@ -10,6 +10,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MenuItemController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ReportingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('login'));
@@ -33,6 +34,10 @@ Route::middleware('auth')->group(function () {
     Route::get('dashboard/poll', [DashboardController::class, 'poll'])->name('dashboard.poll');
 
     Route::middleware('role:admin,staff')->group(function () {
+        Route::get('reporting/completed-orders', [ReportingController::class, 'completedOrders'])->name('reporting.completed-orders');
+    });
+
+    Route::middleware('role:admin,staff')->group(function () {
         Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
         Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
@@ -47,5 +52,9 @@ Route::middleware('auth')->group(function () {
         Route::resource('categories', CategoryController::class)->except(['show']);
         Route::resource('menu-items', MenuItemController::class)->except(['show']);
         Route::resource('dining-tables', DiningTableController::class)->except(['show']);
+    });
+
+    Route::middleware('role:admin,staff')->group(function () {
+        Route::delete('customer-sessions/{customerSession}', [DiningTableController::class, 'destroyCustomerSession'])->name('customer-sessions.destroy');
     });
 });

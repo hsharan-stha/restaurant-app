@@ -20,18 +20,10 @@ class DashboardController extends Controller
     public function __invoke(Request $request): View
     {
         $orders = $this->orderRepository->allWithRelations();
-        $completedFilterEnd = $this->parseCompletedDate(
-            $request->query('completed_to'),
-            now()
-        );
-        $completedFilterStart = $this->parseCompletedDate(
-            $request->query('completed_from'),
-            $completedFilterEnd->copy()->subDay()
-        );
-
-        if ($completedFilterStart->gt($completedFilterEnd)) {
-            [$completedFilterStart, $completedFilterEnd] = [$completedFilterEnd, $completedFilterStart];
-        }
+        
+        // Show only last 2 days in dashboard (no filter)
+        $completedFilterEnd = now();
+        $completedFilterStart = now()->subDays(2);
 
         $completedOrders = $orders
             ->filter(fn ($o) => $o->status === OrderStatus::Completed)
@@ -57,8 +49,6 @@ class DashboardController extends Controller
             'pendingOrders' => $orders->filter(fn ($o) => $o->status === OrderStatus::Pending)->values(),
             'preparingOrders' => $orders->filter(fn ($o) => $o->status === OrderStatus::Preparing)->values(),
             'completedOrderGroups' => $this->buildCompletedOrderGroups($completedOrders),
-            'completedFilterFrom' => $completedFilterStart->toDateString(),
-            'completedFilterTo' => $completedFilterEnd->toDateString(),
             'latestCheckoutRequestAt' => $latestCheckoutRequestAt,
             'latestOrderItemId' => $latestOrderItemId,
         ]);

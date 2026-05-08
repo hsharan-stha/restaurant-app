@@ -21,8 +21,6 @@
                 'title' => 'Completed',
                 'titleClass' => 'text-emerald-400',
                 'groups' => $completedOrderGroups,
-                'completedFilterFrom' => $completedFilterFrom,
-                'completedFilterTo' => $completedFilterTo,
             ])
         </div>
 
@@ -68,6 +66,10 @@
                 <div class="space-y-3">
                     <a href="{{ route('orders.create') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl bg-orange-600 px-4 py-4 text-base font-semibold text-white hover:bg-orange-500">
                         New order
+                    </a>
+
+                    <a href="{{ route('reporting.completed-orders') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl border border-emerald-200/20 bg-emerald-600/20 px-4 py-4 text-base font-semibold text-emerald-200 hover:border-emerald-300 hover:bg-emerald-600/30">
+                        Reports
                     </a>
 
                     @if(auth()->user()->isAdmin())

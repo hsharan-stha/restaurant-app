@@ -95,6 +95,11 @@ class PaymentService
 
         if (! $hasRemainingOpenOrders) {
             $order->table()->update(['status' => TableStatus::Available]);
+            
+            // Delete the customer session for this order
+            if ($order->customer_session_id) {
+                $order->customerSession()->delete();
+            }
         }
     }
 }

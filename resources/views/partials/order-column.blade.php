@@ -3,8 +3,8 @@
     use App\Enums\PaymentStatus;
 @endphp
 
-<div class="restaurant-dashboard-panel restaurant-dashboard-text flex min-h-0 flex-col border">
-    <div class="border-b border-orange-200/15 px-4 py-3">
+<div class="restaurant-dashboard-panel restaurant-dashboard-text flex min-h-0 flex-col border-2 border-orange-500/30">
+    <div class="border-b-2 border-orange-500/30 bg-gradient-to-r from-orange-950/40 to-orange-900/20 px-4 py-3">
         <div class="flex items-center justify-between gap-3">
             <h2 class="text-2xl font-semibold uppercase tracking-wide {{ $titleClass }}">{{ $title }}</h2>
             @if(!empty($showCount))
@@ -16,11 +16,10 @@
     </div>
     <div class="restaurant-dashboard-scroll min-h-0 flex-1 space-y-8 overflow-y-auto p-3">
         @forelse($orders as $order)
-            <article data-order-id="{{ $order->id }}" class="rounded-lg p-3 hover:bg-orange-200/5">
+            <article data-order-id="{{ $order->id }}" class="rounded-lg border-2 border-orange-500/40 bg-orange-950/30 p-4 hover:border-orange-500/60 hover:bg-orange-950/50 shadow-lg">
                 <div class="flex items-start justify-between gap-2">
                     <div>
-                        <p class="text-[2rem] font-medium text-white">#{{ $order->id }}</p>
-                        <p class="restaurant-dashboard-muted text-xl">Table {{ $order->table->table_number }}</p>
+                        <p class="text-5xl font-bold text-white">Table {{ $order->table->table_number }}</p>
                         @if(in_array($order->status, [OrderStatus::Pending, OrderStatus::Preparing], true))
                             @php
                                 $secondsAgo = (int) $order->created_at?->diffInSeconds(now());
@@ -50,9 +49,9 @@
                     </div>
                 </div>
                 @if(in_array($order->status, [OrderStatus::Pending, OrderStatus::Preparing], true))
-                    <div class="restaurant-dashboard-inset mt-3 rounded-md border p-2">
-                        <p class="restaurant-dashboard-kicker mb-1 text-lg uppercase tracking-wide">Items</p>
-                        <ul class="space-y-1 text-xl text-orange-50/90">
+                    <div class="restaurant-dashboard-inset mt-3 rounded-md border-2 border-orange-400/40 bg-orange-900/20 p-3">
+                        <p class="restaurant-dashboard-kicker mb-2 text-lg font-semibold uppercase tracking-wide text-orange-300">Items</p>
+                        <ul class="space-y-2 text-xl text-orange-50/90">
                             @foreach($order->items as $line)
                                 @php
                                     $itemSecondsAgo = (int) $line->created_at?->diffInSeconds(now());
@@ -79,7 +78,7 @@
                         </ul>
                     </div>
                 @endif
-                <div class="mt-3 flex flex-wrap gap-2">
+                <div class="mt-3 border-t-2 border-orange-400/40 pt-3 flex flex-wrap gap-2">
                     @if($order->status === OrderStatus::Pending)
                         <form method="POST" action="{{ route('orders.update-status', $order) }}" class="inline">
                             @csrf

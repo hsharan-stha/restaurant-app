@@ -54,6 +54,6 @@ class OrderController extends Controller
         $status = OrderStatus::from($request->validated('status'));
         $this->orderService->updateStatus($order, $status);
 
-        return redirect()->route('dashboard')->with('status', 'Order status updated.');
+        return redirect()->route('dashboard');
     }
 }
