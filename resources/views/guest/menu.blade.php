@@ -294,12 +294,12 @@
 
         <div class="hotpepper-mobile-bar lg:hidden">
             <button type="button" id="guest-open-category" class="hotpepper-mobile-side-btn">
-                <span class="text-sm font-bold uppercase tracking-[0.22em] text-orange-600">Left</span>
-                <span class="mt-1 text-base font-semibold text-slate-900">Food categories</span>
+                <span class="hp-mobile-label font-bold uppercase tracking-[0.18em] text-orange-600">Left</span>
+                <span class="hp-mobile-title mt-1 font-semibold text-slate-900">Food categories</span>
             </button>
             <button type="button" id="guest-open-order" class="hotpepper-mobile-bar-btn">
-                <span id="guest-cart-bar-total">&yen;0</span>
-                <span>Order <span id="guest-cart-bar-count">0</span></span>
+                <span class="hp-mobile-order-text" id="guest-cart-bar-total">&yen;0</span>
+                <span class="hp-mobile-order-text">Order <span id="guest-cart-bar-count">0</span></span>
             </button>
         </div>
     </div>

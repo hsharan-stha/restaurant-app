@@ -3,11 +3,8 @@
 @section('title', 'Completed Orders Report')
 
 @section('content')
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6">
         <h1 class="text-2xl font-semibold text-white">Completed Orders Report</h1>
-        <a href="{{ route('dashboard') }}" class="rounded-lg bg-slate-700 px-4 py-2 text-sm text-white hover:bg-slate-600">
-            Back to Dashboard
-        </a>
     </div>
 
     <div class="mb-6 rounded-lg border border-slate-800 bg-slate-900/50 p-6">
@@ -59,67 +56,95 @@
         </form>
     </div>
 
-    @if($completedOrderGroups->isEmpty())
+    @if($completedOrderGroupsByDate->isEmpty())
         <div class="rounded-lg border border-slate-800 bg-slate-900/50 p-6 text-center">
             <p class="text-slate-400">No completed orders found for the selected date range.</p>
         </div>
     @else
         <div class="space-y-6">
-            @foreach($completedOrderGroups as $group)
-                <div class="rounded-lg border-2 border-emerald-500/40 bg-emerald-950/30 p-4 hover:border-emerald-500/60 hover:bg-emerald-950/50 shadow-lg">
-                    <div class="flex items-start justify-between gap-2">
+            @foreach($completedOrderGroupsByDate as $dateGroup)
+                <details class="group rounded-xl border-2 border-cyan-500/40 bg-cyan-950/25 p-4 shadow-lg" @if($loop->first) open @endif>
+                    <summary class="mb-4 flex cursor-pointer list-none flex-wrap items-start justify-between gap-3 border-b border-cyan-500/30 pb-3">
                         <div>
-                            <p class="text-3xl font-bold text-white">Table {{ $group['table_number'] }}</p>
-                            <p class="mt-1 text-sm text-slate-400">
-                                {{ $group['order_count'] }} {{ \Illuminate\Support\Str::plural('order', $group['order_count']) }}
-                            </p>
-                            <p class="mt-1 text-lg text-emerald-300">
-                                Total: ¥{{ number_format($group['display_total'], 2) }}
+                            <p class="text-2xl font-bold text-white">{{ $dateGroup['date_label'] }}</p>
+                            <p class="mt-1 text-sm text-slate-300">
+                                {{ $dateGroup['order_count'] }} {{ \Illuminate\Support\Str::plural('order', $dateGroup['order_count']) }}
                             </p>
                         </div>
-                    </div>
+                        <div class="flex items-center gap-3">
+                            <p class="text-lg font-semibold text-cyan-200">
+                                Date total: ¥{{ number_format($dateGroup['display_total'], 2) }}
+                            </p>
+                            <span class="rounded-md border border-cyan-300/30 px-2 py-1 text-xs text-cyan-100 group-open:hidden">Expand</span>
+                            <span class="rounded-md border border-cyan-300/30 px-2 py-1 text-xs text-cyan-100 hidden group-open:inline-flex">Collapse</span>
+                        </div>
+                    </summary>
 
-                    <div class="mt-4 rounded-lg border-2 border-emerald-400/40 bg-emerald-900/20 p-3">
-                        <p class="mb-3 font-semibold uppercase tracking-wide text-emerald-300">Completed Orders</p>
-                        <ul class="space-y-3">
-                            @foreach($group['orders'] as $order)
-                                @php
-                                    $paid = $order->payments->contains(fn ($payment) => $payment->status->value === 'completed');
-                                @endphp
-                                <li class="rounded-md border-2 border-emerald-400/40 bg-emerald-900/20 px-3 py-3">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <div class="min-w-0">
-                                            <p class="font-semibold text-white">Order #{{ $order->id }}</p>
-                                            <p class="mt-1 text-sm text-slate-400">
-                                                {{ $order->items->count() }} {{ \Illuminate\Support\Str::plural('item', $order->items->count()) }}
-                                            </p>
-                                            <p class="mt-1 text-xs text-slate-500">
-                                                Completed: {{ $order->updated_at?->format('M d, g:i A') ?? 'N/A' }}
-                                            </p>
-                                        </div>
-                                        <div class="text-right">
-                                            <p class="text-emerald-200">¥{{ number_format((float) ($order->invoice->total ?? $order->total_amount), 2) }}</p>
-                                            <p class="mt-1 text-sm {{ $paid ? 'text-emerald-400' : 'text-amber-400' }}">
-                                                {{ $paid ? '✓ Paid' : '✗ Unpaid' }}
-                                            </p>
-                                        </div>
+                    <div class="space-y-4">
+                        @foreach($dateGroup['groups'] as $group)
+                            <div class="rounded-lg border-2 border-emerald-500/40 bg-emerald-950/30 p-4 hover:border-emerald-500/60 hover:bg-emerald-950/50">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div>
+                                        <p class="text-3xl font-bold text-white">Table {{ $group['table_number'] }}</p>
+                                        <p class="mt-1 text-sm text-slate-400">
+                                            {{ $group['order_count'] }} {{ \Illuminate\Support\Str::plural('order', $group['order_count']) }}
+                                        </p>
+                                        <p class="mt-1 text-lg text-emerald-300">
+                                            Total: ¥{{ number_format($group['display_total'], 2) }}
+                                        </p>
+                                        <p class="mt-1 text-sm text-cyan-200">
+                                            Seated:
+                                            {{ $group['session_started_at']?->format('g:i A') ?? 'N/A' }}
+                                            ->
+                                            {{ $group['session_ended_at']?->format('g:i A') ?? 'N/A' }}
+                                        </p>
                                     </div>
+                                </div>
 
-                                    @if($order->items->isNotEmpty())
-                                        <ul class="mt-3 space-y-2 border-t-2 border-emerald-400/40 pt-3 text-sm text-slate-300">
-                                            @foreach($order->items as $line)
-                                                <li class="flex items-start justify-between gap-3">
-                                                    <span class="min-w-0 flex-1">{{ $line->menuItem->name }} × {{ $line->quantity }}</span>
-                                                    <span class="shrink-0 text-slate-400">¥{{ number_format((float) $line->price * $line->quantity, 2) }}</span>
-                                                </li>
-                                            @endforeach
-                                        </ul>
-                                    @endif
-                                </li>
-                            @endforeach
-                        </ul>
+                                <div class="mt-4 rounded-lg border-2 border-emerald-400/40 bg-emerald-900/20 p-3">
+                                    <p class="mb-3 font-semibold uppercase tracking-wide text-emerald-300">Completed Orders</p>
+                                    <ul class="space-y-3">
+                                        @foreach($group['orders'] as $order)
+                                            @php
+                                                $paid = $order->payments->contains(fn ($payment) => $payment->status->value === 'completed');
+                                            @endphp
+                                            <li class="rounded-md border-2 border-emerald-400/40 bg-emerald-900/20 px-3 py-3">
+                                                <div class="flex items-start justify-between gap-2">
+                                                    <div class="min-w-0">
+                                                        <p class="font-semibold text-white">Order #{{ $order->id }}</p>
+                                                        <p class="mt-1 text-sm text-slate-400">
+                                                            {{ $order->items->count() }} {{ \Illuminate\Support\Str::plural('item', $order->items->count()) }}
+                                                        </p>
+                                                        <p class="mt-1 text-xs text-slate-500">
+                                                            Completed: {{ $order->updated_at?->format('M d, g:i A') ?? 'N/A' }}
+                                                        </p>
+                                                    </div>
+                                                    <div class="text-right">
+                                                        <p class="text-emerald-200">¥{{ number_format((float) ($order->invoice->total ?? $order->total_amount), 2) }}</p>
+                                                        <p class="mt-1 text-sm {{ $paid ? 'text-emerald-400' : 'text-amber-400' }}">
+                                                            {{ $paid ? '✓ Paid' : '✗ Unpaid' }}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                @if($order->items->isNotEmpty())
+                                                    <ul class="mt-3 space-y-2 border-t-2 border-emerald-400/40 pt-3 text-sm text-slate-300">
+                                                        @foreach($order->items as $line)
+                                                            <li class="flex items-start justify-between gap-3">
+                                                                <span class="min-w-0 flex-1">{{ $line->menuItem->name }} × {{ $line->quantity }}</span>
+                                                                <span class="shrink-0 text-slate-400">¥{{ number_format((float) $line->price * $line->quantity, 2) }}</span>
+                                                            </li>
+                                                        @endforeach
+                                                    </ul>
+                                                @endif
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
-                </div>
+                </details>
             @endforeach
         </div>
     @endif

@@ -1,6 +1,9 @@
 import './bootstrap';
 
 const VOICE_ALERT_KEY = 'restaurant-os-voice-alerts';
+const LAST_SEEN_ORDER_ID_KEY = 'restaurant-os-last-seen-order-id';
+const LAST_SEEN_ORDER_ITEM_ID_KEY = 'restaurant-os-last-seen-order-item-id';
+const LAST_CHECKOUT_SEEN_AT_KEY = 'restaurant-os-last-checkout-seen-at';
 
 function getVoiceAlertEnabled() {
     const stored = window.localStorage.getItem(VOICE_ALERT_KEY);
@@ -63,10 +66,27 @@ document.addEventListener('DOMContentLoaded', () => {
     let speakingNow = false;
     let refreshScheduled = false;
     let pollInFlight = false;
-    let lastSeenId = 0;
-    let lastSeenOrderItemId = Number(root?.dataset?.latestOrderItemId ?? 0);
-    let lastCheckoutSeenAt = root?.dataset?.latestCheckoutRequestAt ?? '';
+    let lastSeenId = Number(window.localStorage.getItem(LAST_SEEN_ORDER_ID_KEY) ?? 0);
+    let lastSeenOrderItemId = Number(window.localStorage.getItem(LAST_SEEN_ORDER_ITEM_ID_KEY) ?? 0);
+    let lastCheckoutSeenAt = window.localStorage.getItem(LAST_CHECKOUT_SEEN_AT_KEY) ?? '';
     let preferredVoice = null;
+
+    if (root) {
+        const rootLastSeenOrderItem = Number(root?.dataset?.latestOrderItemId ?? 0);
+        if (Number.isFinite(rootLastSeenOrderItem) && rootLastSeenOrderItem > lastSeenOrderItemId) {
+            lastSeenOrderItemId = rootLastSeenOrderItem;
+        }
+        const rootCheckoutSeenAt = root?.dataset?.latestCheckoutRequestAt ?? '';
+        if (rootCheckoutSeenAt && rootCheckoutSeenAt > lastCheckoutSeenAt) {
+            lastCheckoutSeenAt = rootCheckoutSeenAt;
+        }
+    }
+
+    const persistAlertState = () => {
+        window.localStorage.setItem(LAST_SEEN_ORDER_ID_KEY, String(Math.max(0, Number(lastSeenId) || 0)));
+        window.localStorage.setItem(LAST_SEEN_ORDER_ITEM_ID_KEY, String(Math.max(0, Number(lastSeenOrderItemId) || 0)));
+        window.localStorage.setItem(LAST_CHECKOUT_SEEN_AT_KEY, lastCheckoutSeenAt || '');
+    };
 
     const pickPreferredVoice = () => {
         if (!('speechSynthesis' in window)) {
@@ -96,6 +116,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const performDashboardRefresh = () => {
+        if (!root) {
+            return;
+        }
         if (refreshScheduled) {
             return;
         }
@@ -209,16 +232,57 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateLastSeenFromDom = () => {
+        if (!root) {
+            return;
+        }
         const rowIds = [...document.querySelectorAll('[data-order-id]')]
             .map((el) => Number(el.getAttribute('data-order-id')))
             .filter((id) => Number.isFinite(id) && id > 0);
         if (rowIds.length > 0) {
             lastSeenId = Math.max(...rowIds);
         }
+        persistAlertState();
+    };
+
+    const initializeAlertBaseline = async () => {
+        if (
+            window.localStorage.getItem(LAST_SEEN_ORDER_ITEM_ID_KEY) !== null
+            || window.localStorage.getItem(LAST_CHECKOUT_SEEN_AT_KEY) !== null
+            || root
+        ) {
+            return;
+        }
+
+        try {
+            const url = new URL('/dashboard/poll', window.location.origin);
+            url.searchParams.set('last_seen_id', '999999999');
+            url.searchParams.set('last_seen_order_item_id', '999999999');
+            url.searchParams.set('last_checkout_seen_at', '9999-12-31T23:59:59Z');
+
+            const response = await window.fetch(url.toString(), {
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            });
+            if (!response.ok) {
+                return;
+            }
+            const payload = await response.json();
+            const maxOrderItemId = Number(payload?.max_order_item_id ?? 0);
+            if (Number.isFinite(maxOrderItemId) && maxOrderItemId > 0) {
+                lastSeenOrderItemId = maxOrderItemId;
+            }
+            lastCheckoutSeenAt = new Date().toISOString();
+            persistAlertState();
+        } catch (_error) {
+            // Ignore; next poll will retry naturally.
+        }
     };
 
     const pollForAlerts = async () => {
-        if (!root || pollInFlight) {
+        if (pollInFlight) {
             return;
         }
 
@@ -280,6 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     'checkout',
                 );
             });
+            persistAlertState();
         } catch (_error) {
             // Ignore transient polling errors; next interval will retry.
         } finally {
@@ -340,10 +405,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (!root) {
-        return;
-    }
-
     if ('speechSynthesis' in window) {
         preferredVoice = pickPreferredVoice();
         window.speechSynthesis.onvoiceschanged = () => {
@@ -352,5 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     updateLastSeenFromDom();
-    window.setInterval(pollForAlerts, 4000);
+    initializeAlertBaseline().finally(() => {
+        window.setInterval(pollForAlerts, 4000);
+    });
 });

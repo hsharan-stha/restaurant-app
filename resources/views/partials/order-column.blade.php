@@ -1,6 +1,46 @@
 @php
     use App\Enums\OrderStatus;
     use App\Enums\PaymentStatus;
+
+    $formatAgeLabel = function ($dateTime): string {
+        if (! $dateTime) {
+            return 'N/A';
+        }
+
+        $secondsAgo = max(0, (int) $dateTime->diffInSeconds(now()));
+
+        if ($secondsAgo < 45) {
+            return 'just now';
+        }
+
+        if ($secondsAgo < 120) {
+            return 'soon';
+        }
+
+        $minutes = (int) floor($secondsAgo / 60);
+        if ($minutes < 60) {
+            return $minutes.' '.\Illuminate\Support\Str::plural('min', $minutes).' ago';
+        }
+
+        $hours = (int) floor($minutes / 60);
+        if ($hours < 24) {
+            return $hours.' '.\Illuminate\Support\Str::plural('hour', $hours).' ago';
+        }
+
+        $days = (int) floor($hours / 24);
+        if ($days < 7) {
+            return $days.' '.\Illuminate\Support\Str::plural('day', $days).' ago';
+        }
+
+        $weeks = (int) floor($days / 7);
+        if ($weeks < 4) {
+            return $weeks.' '.\Illuminate\Support\Str::plural('week', $weeks).' ago';
+        }
+
+        $months = (int) floor($days / 30);
+
+        return $months.' '.\Illuminate\Support\Str::plural('month', $months).' ago';
+    };
 @endphp
 
 <div class="restaurant-dashboard-panel restaurant-dashboard-text flex min-h-0 flex-col border-2 border-orange-500/30">
@@ -22,15 +62,7 @@
                         <p class="text-5xl font-bold text-white">Table {{ $order->table->table_number }}</p>
                         @if(in_array($order->status, [OrderStatus::Pending, OrderStatus::Preparing], true))
                             @php
-                                $secondsAgo = (int) $order->created_at?->diffInSeconds(now());
-                                $minutesAgo = max(1, (int) ceil($secondsAgo / 60));
-                                if ($secondsAgo < 45) {
-                                    $orderAgeLabel = 'just now';
-                                } elseif ($secondsAgo < 120) {
-                                    $orderAgeLabel = 'soon';
-                                } else {
-                                    $orderAgeLabel = $minutesAgo.' min ago';
-                                }
+                                $orderAgeLabel = $formatAgeLabel($order->created_at);
                                 $orderAgeClass = $orderAgeLabel === 'just now'
                                     ? ($order->status === OrderStatus::Pending
                                         ? 'inline-flex rounded-full border border-rose-400/70 bg-rose-500/20 px-2 py-0.5 font-semibold text-rose-200'
@@ -44,7 +76,7 @@
                     <div class="flex flex-col items-end gap-1">
                         @include('partials.status-badge', ['status' => $order->status])
                         @if($order->status !== OrderStatus::Pending)
-                            <a href="{{ route('orders.show', $order) }}" target="_blank" rel="noopener noreferrer" class="restaurant-dashboard-muted text-xl hover:text-white">Details ></a>
+                            <a href="{{ route('orders.show', $order) }}" class="restaurant-dashboard-muted text-xl hover:text-white">Details ></a>
                         @endif
                     </div>
                 </div>
@@ -54,15 +86,7 @@
                         <ul class="space-y-2 text-xl text-orange-50/90">
                             @foreach($order->items as $line)
                                 @php
-                                    $itemSecondsAgo = (int) $line->created_at?->diffInSeconds(now());
-                                    $itemMinutesAgo = max(1, (int) ceil($itemSecondsAgo / 60));
-                                    if ($itemSecondsAgo < 45) {
-                                        $itemAgeLabel = 'just now';
-                                    } elseif ($itemSecondsAgo < 120) {
-                                        $itemAgeLabel = 'soon';
-                                    } else {
-                                        $itemAgeLabel = $itemMinutesAgo.' min ago';
-                                    }
+                                    $itemAgeLabel = $formatAgeLabel($line->created_at);
                                     $itemAgeClass = $itemAgeLabel === 'just now'
                                         ? ($order->status === OrderStatus::Pending
                                             ? 'inline-flex rounded-full border border-rose-400/70 bg-rose-500/20 px-1.5 py-0.5 font-semibold text-rose-200'
@@ -96,7 +120,7 @@
                         </form>
                     @endif
                     @if($order->status === OrderStatus::Completed && $order->invoice && ! $order->payments->contains(fn ($p) => $p->status === PaymentStatus::Completed))
-                        <a href="{{ route('payments.create', $order) }}" target="_blank" rel="noopener noreferrer" class="rounded-md bg-rose-700 px-4 py-2.5 text-xl text-white hover:bg-rose-600">Checkout</a>
+                        <a href="{{ route('payments.create', $order) }}" class="rounded-md bg-rose-700 px-4 py-2.5 text-xl text-white hover:bg-rose-600">Checkout</a>
                     @endif
                 </div>
             </article>

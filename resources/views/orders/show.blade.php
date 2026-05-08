@@ -8,10 +8,6 @@
 @endphp
 
 @section('content')
-    <div class="mb-6">
-        <a href="{{ route('dashboard') }}" class="text-sm text-slate-400 hover:text-white">← Back to dashboard</a>
-    </div>
-
     <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold text-white">Order #{{ $order->id }}</h1>

@@ -79,6 +79,7 @@ class DashboardController extends Controller
                     fn ($order) => $order->invoice
                         && ! $order->payments->contains(fn ($payment) => $payment->status->value === 'completed')
                 );
+                $latestCompletedAt = $group->max(fn ($order) => $order->updated_at ?? $order->created_at);
 
                 return [
                     'id' => $firstOrder->customer_session_id ?: $firstOrder->id,
@@ -89,8 +90,13 @@ class DashboardController extends Controller
                     'order_count' => $group->count(),
                     'display_total' => $group->sum(fn ($order) => (float) ($order->invoice->total ?? $order->total_amount)),
                     'checkout_order' => $checkoutOrder,
+                    'latest_completed_at' => $latestCompletedAt,
                 ];
             })
+            ->sortBy([
+                fn (array $group) => $group['checkout_order'] ? 0 : 1,
+                fn (array $group) => -($group['latest_completed_at']?->timestamp ?? 0),
+            ])
             ->values();
     }
 

@@ -645,4 +645,19 @@
         height: 2rem;
         width: 2rem;
     }
+
+    .hp-mobile-label {
+        font-size: 0.62rem !important;
+        line-height: 0.85rem !important;
+    }
+
+    .hp-mobile-title {
+        font-size: 0.82rem !important;
+        line-height: 1rem !important;
+    }
+
+    .hp-mobile-order-text {
+        font-size: 0.82rem !important;
+        line-height: 1rem !important;
+    }
 }

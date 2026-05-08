@@ -64,22 +64,22 @@
                 </div>
 
                 <div class="space-y-3">
-                    <a href="{{ route('orders.create') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl bg-orange-600 px-4 py-4 text-base font-semibold text-white hover:bg-orange-500">
+                    <a href="{{ route('orders.create') }}" class="block rounded-2xl bg-orange-600 px-4 py-4 text-base font-semibold text-white hover:bg-orange-500">
                         New order
                     </a>
 
-                    <a href="{{ route('reporting.completed-orders') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl border border-emerald-200/20 bg-emerald-600/20 px-4 py-4 text-base font-semibold text-emerald-200 hover:border-emerald-300 hover:bg-emerald-600/30">
+                    <a href="{{ route('reporting.completed-orders') }}" class="block rounded-2xl border border-emerald-200/20 bg-emerald-600/20 px-4 py-4 text-base font-semibold text-emerald-200 hover:border-emerald-300 hover:bg-emerald-600/30">
                         Reports
                     </a>
 
                     @if(auth()->user()->isAdmin())
-                        <a href="{{ route('categories.index') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl border border-orange-200/20 bg-white/5 px-4 py-4 text-base font-semibold text-white hover:border-orange-300 hover:bg-white/10">
+                        <a href="{{ route('categories.index') }}" class="block rounded-2xl border border-orange-200/20 bg-white/5 px-4 py-4 text-base font-semibold text-white hover:border-orange-300 hover:bg-white/10">
                             Category
                         </a>
-                        <a href="{{ route('menu-items.index') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl border border-orange-200/20 bg-white/5 px-4 py-4 text-base font-semibold text-white hover:border-orange-300 hover:bg-white/10">
+                        <a href="{{ route('menu-items.index') }}" class="block rounded-2xl border border-orange-200/20 bg-white/5 px-4 py-4 text-base font-semibold text-white hover:border-orange-300 hover:bg-white/10">
                             Item
                         </a>
-                        <a href="{{ route('dining-tables.index') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl border border-orange-200/20 bg-white/5 px-4 py-4 text-base font-semibold text-white hover:border-orange-300 hover:bg-white/10">
+                        <a href="{{ route('dining-tables.index') }}" class="block rounded-2xl border border-orange-200/20 bg-white/5 px-4 py-4 text-base font-semibold text-white hover:border-orange-300 hover:bg-white/10">
                             Table
                         </a>
                     @endif

@@ -6,7 +6,7 @@
     <div class="border-b-2 border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 to-emerald-900/20 px-4 py-3">
         <div class="flex items-center justify-between gap-3">
             <h2 class="text-2xl font-semibold uppercase tracking-wide {{ $titleClass }}">{{ $title }}</h2>
-            <a href="{{ route('reporting.completed-orders') }}" target="_blank" rel="noopener noreferrer" class="rounded-lg border border-emerald-400/50 bg-emerald-900/30 px-3 py-1.5 text-sm text-emerald-300 hover:border-emerald-300 hover:bg-emerald-900/50">
+            <a href="{{ route('reporting.completed-orders') }}" class="rounded-lg border border-emerald-400/50 bg-emerald-900/30 px-3 py-1.5 text-sm text-emerald-300 hover:border-emerald-300 hover:bg-emerald-900/50">
                 View Reports
             </a>
         </div>
@@ -66,7 +66,7 @@
 
                 <div class="mt-3 border-t-2 border-emerald-400/40 pt-3 flex flex-wrap gap-2">
                     @if($group['checkout_order'])
-                        <a href="{{ route('payments.create', $group['checkout_order']) }}" target="_blank" rel="noopener noreferrer" class="rounded-md bg-rose-700 px-4 py-2.5 text-xl text-white hover:bg-rose-600">Checkout</a>
+                        <a href="{{ route('payments.create', $group['checkout_order']) }}" class="rounded-md bg-rose-700 px-4 py-2.5 text-xl text-white hover:bg-rose-600">Checkout</a>
                     @else
                         <p class="rounded-md border border-emerald-500/30 bg-emerald-950/40 px-4 py-2.5 text-xl text-emerald-200">Payment received</p>
                     @endif

@@ -3,9 +3,6 @@
 @section('title', 'New order')
 
 @section('content')
-    <div class="mb-6">
-        <a href="{{ route('dashboard') }}" class="text-sm text-slate-400 hover:text-white">← Dashboard</a>
-    </div>
     <h1 class="mb-6 text-2xl font-semibold text-white">New order</h1>
 
     <form method="POST" action="{{ route('orders.store') }}" id="order-form" class="max-w-2xl space-y-6">

@@ -8,6 +8,16 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="app-theme min-h-screen bg-slate-950 text-slate-100 antialiased">
+    @auth
+        <a
+            href="{{ route('dashboard') }}"
+            class="fixed bottom-4 right-4 z-50 inline-flex items-center gap-2 rounded-xl border border-orange-300/40 bg-orange-600/90 px-4 py-2 text-sm font-semibold text-white shadow-xl hover:bg-orange-500"
+        >
+            <span aria-hidden="true">←</span>
+            <span>Dashboard</span>
+        </a>
+    @endauth
+
     <main class="mx-auto max-w-7xl px-4 py-8">
         @if(session('status'))
             <div class="mb-6 rounded-lg border border-emerald-600/40 bg-emerald-950/40 px-4 py-3 text-emerald-200">{{ session('status') }}</div>
