@@ -55,6 +55,10 @@ function playFallbackBeep() {
 document.addEventListener('DOMContentLoaded', () => {
     const root = document.getElementById('live-orders-dashboard');
     const voiceButton = document.getElementById('voice-alert-toggle');
+    const actionToggle = document.getElementById('dashboard-action-toggle');
+    const actionClose = document.getElementById('dashboard-action-close');
+    const actionPanel = document.getElementById('dashboard-action-panel');
+    const actionBackdrop = document.getElementById('dashboard-action-backdrop');
     let speechQueue = [];
     let speakingNow = false;
     let refreshScheduled = false;
@@ -188,6 +192,22 @@ document.addEventListener('DOMContentLoaded', () => {
         scheduleDashboardRefresh();
     };
 
+    const setActionPanelOpen = (isOpen) => {
+        if (!actionPanel || !actionBackdrop || !actionToggle) {
+            return;
+        }
+
+        actionPanel.classList.toggle('translate-x-full', !isOpen);
+        actionPanel.classList.toggle('opacity-0', !isOpen);
+        actionPanel.classList.toggle('pointer-events-none', !isOpen);
+        actionBackdrop.classList.toggle('opacity-0', !isOpen);
+        actionBackdrop.classList.toggle('bg-slate-950/0', !isOpen);
+        actionBackdrop.classList.toggle('bg-slate-950/50', isOpen);
+        actionBackdrop.classList.toggle('pointer-events-none', !isOpen);
+        actionToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        actionPanel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    };
+
     const updateLastSeenFromDom = () => {
         const rowIds = [...document.querySelectorAll('[data-order-id]')]
             .map((el) => Number(el.getAttribute('data-order-id')))
@@ -237,10 +257,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (id > lastSeenId) {
                     lastSeenId = id;
                 }
+                const alertType = order?.type === 'preparing_order_update'
+                    ? 'preparing_order_update'
+                    : 'new_order';
                 handleRealtimeAlert(
-                    order?.announcement_text ?? `Table number ${order?.table_number ?? ''} has placed an order`,
+                    order?.announcement_text
+                        ?? (alertType === 'preparing_order_update'
+                            ? `Table number ${order?.table_number ?? ''} has added an order`
+                            : `Table number ${order?.table_number ?? ''} has placed an order`),
                     id || null,
-                    'new_order',
+                    alertType,
                 );
             });
 
@@ -294,6 +320,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 speechQueue = [];
                 speakingNow = false;
                 window.speechSynthesis.cancel();
+            }
+        });
+    }
+
+    if (actionToggle && actionPanel && actionBackdrop) {
+        actionToggle.addEventListener('click', () => {
+            const isOpen = actionToggle.getAttribute('aria-expanded') === 'true';
+            setActionPanelOpen(!isOpen);
+        });
+
+        actionClose?.addEventListener('click', () => setActionPanelOpen(false));
+        actionBackdrop.addEventListener('click', () => setActionPanelOpen(false));
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                setActionPanelOpen(false);
             }
         });
     }

@@ -37,15 +37,16 @@ class CustomerOrderingTest extends TestCase
             ->assertSee('Table 7')
             ->assertSee('Harami');
 
-        $this->post(route('guest.orders.store'), [
+        $response = $this->post(route('guest.orders.store'), [
             'items' => [
                 ['menu_item_id' => $item->id, 'quantity' => 2],
             ],
-        ])->assertRedirect(route('guest.menu', ['ordered' => 1]));
+        ]);
 
         $order = Order::query()->first();
 
         $this->assertNotNull($order);
+        $response->assertRedirect(route('guest.menu', ['ordered' => $order->id]));
         $this->assertSame(OrderStatus::Pending, $order->status);
         $this->assertEquals(19.00, (float) $order->total_amount);
         $this->assertDatabaseCount('customer_sessions', 1);

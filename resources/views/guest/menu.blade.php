@@ -174,7 +174,6 @@
                                                     <span class="min-w-8 text-center text-sm font-bold text-slate-900" data-quantity-value>0</span>
                                                     <button type="button" class="hotpepper-stepper-btn" data-quantity-up>+</button>
                                                 </div>
-                                                <button type="button" class="hotpepper-add-btn w-full sm:w-auto" data-add-item>Add to cart</button>
                                             </div>
                                         </div>
                                     </div>
@@ -400,6 +399,17 @@
                 submitButtonMobile.classList.toggle('cursor-not-allowed', !hasItems);
             };
 
+            const syncMenuCardQuantities = () => {
+                menuCards.forEach((card) => {
+                    const quantityValue = card.querySelector('[data-quantity-value]');
+                    const downButton = card.querySelector('[data-quantity-down]');
+                    const currentQuantity = cart.get(card.dataset.id)?.quantity ?? 0;
+
+                    quantityValue.textContent = String(currentQuantity);
+                    downButton.disabled = currentQuantity === 0;
+                });
+            };
+
             const buildCartMarkup = (entries, linesRoot, emptyNode, hiddenRoot) => {
                 linesRoot.innerHTML = '';
                 hiddenRoot.innerHTML = '';
@@ -489,43 +499,21 @@
                 barCountEl.textContent = String(totalQuantity);
                 barTotalEl.textContent = currency(totalAmount);
                 updateSubmitState(entries.length > 0);
+                syncMenuCardQuantities();
                 bindCartRowActions();
             };
 
             menuCards.forEach((card) => {
-                let quantity = 0;
-                const quantityValue = card.querySelector('[data-quantity-value]');
                 const downButton = card.querySelector('[data-quantity-down]');
                 const upButton = card.querySelector('[data-quantity-up]');
-                const addButton = card.querySelector('[data-add-item]');
-
-                const syncQuantity = () => {
-                    quantityValue.textContent = String(quantity);
-                    downButton.disabled = quantity === 0;
-                    addButton.disabled = quantity === 0;
-                };
 
                 downButton.addEventListener('click', () => {
-                    quantity = Math.max(0, quantity - 1);
-                    syncQuantity();
+                    decreaseCartItem(card.dataset.id);
                 });
 
                 upButton.addEventListener('click', () => {
-                    quantity = Math.min(20, quantity + 1);
-                    syncQuantity();
+                    addToCart(card.dataset.id, card.dataset.name, card.dataset.price, 1);
                 });
-
-                addButton.addEventListener('click', () => {
-                    if (quantity === 0) {
-                        return;
-                    }
-
-                    addToCart(card.dataset.id, card.dataset.name, card.dataset.price, quantity);
-                    quantity = 0;
-                    syncQuantity();
-                });
-
-                syncQuantity();
             });
 
             orderForm?.addEventListener('submit', (event) => {

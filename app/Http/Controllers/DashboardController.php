@@ -56,15 +56,21 @@ class DashboardController extends Controller
             ->concat($orders)
             ->concat($ordersWithNewItems)
             ->filter(fn ($order) => $order
-                && $order->status === OrderStatus::Pending
+                && in_array($order->status, [OrderStatus::Pending, OrderStatus::Preparing], true)
                 && ! in_array($order->id, $announcedOrderIds, true))
             ->map(function ($order) use (&$announcedOrderIds) {
                 $announcedOrderIds[] = $order->id;
+                $isPreparingUpdate = $order->status === OrderStatus::Preparing;
 
                 return [
                     'id' => $order->id,
                     'table_number' => $order->table?->table_number,
-                    'announcement_text' => sprintf('Table number %s has placed an order', $order->table?->table_number),
+                    'type' => $isPreparingUpdate ? 'preparing_order_update' : 'new_order',
+                    'announcement_text' => sprintf(
+                        'Table number %s %s',
+                        $order->table?->table_number,
+                        $isPreparingUpdate ? 'has added an order' : 'has placed an order'
+                    ),
                 ];
             })
             ->values();

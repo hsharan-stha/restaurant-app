@@ -3,7 +3,7 @@
     use App\Enums\PaymentStatus;
 @endphp
 
-<div class="flex max-h-[32rem] flex-col rounded-xl border border-slate-800 bg-slate-900/60 md:max-h-[38rem] lg:max-h-[calc(100vh-15rem)]">
+<div class="flex h-full min-h-0 flex-col border border-slate-800 bg-slate-900/60">
     <div class="border-b border-slate-800 px-4 py-3">
         <h2 class="text-sm font-semibold uppercase tracking-wide {{ $titleClass }}">{{ $title }}</h2>
     </div>
@@ -14,22 +14,24 @@
                     <div>
                         <p class="font-medium text-white">#{{ $order->id }}</p>
                         <p class="text-xs text-slate-500">Table {{ $order->table->table_number }}</p>
-                        @if($order->status === OrderStatus::Pending)
+                        @if(in_array($order->status, [OrderStatus::Pending, OrderStatus::Preparing], true))
                             @php
                                 $secondsAgo = (int) $order->created_at?->diffInSeconds(now());
                                 $minutesAgo = max(1, (int) ceil($secondsAgo / 60));
                                 if ($secondsAgo < 45) {
-                                    $pendingAgeLabel = 'just now';
+                                    $orderAgeLabel = 'just now';
                                 } elseif ($secondsAgo < 120) {
-                                    $pendingAgeLabel = 'soon';
+                                    $orderAgeLabel = 'soon';
                                 } else {
-                                    $pendingAgeLabel = $minutesAgo.' min ago';
+                                    $orderAgeLabel = $minutesAgo.' min ago';
                                 }
-                                $pendingAgeClass = $pendingAgeLabel === 'just now'
-                                    ? 'inline-flex rounded-full border border-rose-400/70 bg-rose-500/20 px-2 py-0.5 font-semibold text-rose-200'
-                                    : '';
+                                $orderAgeClass = $orderAgeLabel === 'just now'
+                                    ? ($order->status === OrderStatus::Pending
+                                        ? 'inline-flex rounded-full border border-rose-400/70 bg-rose-500/20 px-2 py-0.5 font-semibold text-rose-200'
+                                        : 'inline-flex rounded-full border border-sky-400/60 bg-sky-500/20 px-2 py-0.5 font-semibold text-sky-200')
+                                    : ($order->status === OrderStatus::Pending ? '' : 'text-sky-300');
                             @endphp
-                            <p class="mt-1 text-[11px] text-rose-300 {{ $pendingAgeClass }}">{{ $pendingAgeLabel }}</p>
+                            <p class="mt-1 text-[11px] {{ $order->status === OrderStatus::Pending ? 'text-rose-300' : 'text-sky-300' }} {{ $orderAgeClass }}">{{ $orderAgeLabel }}</p>
                         @endif
                         <p class="mt-1 text-sm text-emerald-300">${{ number_format($order->total_amount, 2) }}</p>
                     </div>
@@ -40,7 +42,7 @@
                         @endif
                     </div>
                 </div>
-                @if($order->status === OrderStatus::Pending)
+                @if(in_array($order->status, [OrderStatus::Pending, OrderStatus::Preparing], true))
                     <div class="mt-3 rounded-md border border-slate-800 bg-slate-950/60 p-2">
                         <p class="mb-1 text-[11px] uppercase tracking-wide text-slate-500">Items</p>
                         <ul class="space-y-1 text-xs text-slate-300">
@@ -56,8 +58,10 @@
                                         $itemAgeLabel = $itemMinutesAgo.' min ago';
                                     }
                                     $itemAgeClass = $itemAgeLabel === 'just now'
-                                        ? 'inline-flex rounded-full border border-rose-400/70 bg-rose-500/20 px-1.5 py-0.5 font-semibold text-rose-200'
-                                        : 'text-rose-300';
+                                        ? ($order->status === OrderStatus::Pending
+                                            ? 'inline-flex rounded-full border border-rose-400/70 bg-rose-500/20 px-1.5 py-0.5 font-semibold text-rose-200'
+                                            : 'inline-flex rounded-full border border-sky-400/60 bg-sky-500/20 px-1.5 py-0.5 font-semibold text-sky-200')
+                                        : ($order->status === OrderStatus::Pending ? 'text-rose-300' : 'text-sky-300');
                                 @endphp
                                 <li class="flex items-start justify-between gap-2">
                                     <span class="min-w-0 flex-1 truncate">{{ $line->menuItem->name }} x {{ $line->quantity }}</span>
