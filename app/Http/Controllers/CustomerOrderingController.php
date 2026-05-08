@@ -22,9 +22,16 @@ class CustomerOrderingController extends Controller
         protected OrderService $orderService
     ) {}
 
-    public function enter(Request $request, DiningTable $table): RedirectResponse
+    public function enter(Request $request, DiningTable $table): View|RedirectResponse
     {
-        $customerSession = $this->resolveOrCreateSession($request, $table);
+        try {
+            $customerSession = $this->resolveOrCreateSession($request, $table);
+        } catch (\InvalidArgumentException $e) {
+            return view('guest.table-unavailable', [
+                'table' => $table,
+                'message' => $e->getMessage(),
+            ]);
+        }
 
         $request->session()->put('customer_session_token', $customerSession->session_token);
 
@@ -48,18 +55,26 @@ class CustomerOrderingController extends Controller
             ->orderBy('name')
             ->get();
 
-        $activeOrder = Order::query()
-            ->with(['items.menuItem', 'table'])
-            ->where('table_id', $customerSession->table_id)
-            ->whereIn('status', [OrderStatus::Pending->value, OrderStatus::Preparing->value])
+        $sessionOrders = Order::query()
+            ->with(['items.menuItem', 'table', 'invoice', 'payments'])
+            ->where('customer_session_id', $customerSession->id)
             ->latest('id')
-            ->first();
+            ->get();
+        $activeOrder = $sessionOrders
+            ->first(fn ($order) => in_array($order->status, [OrderStatus::Pending, OrderStatus::Preparing], true));
+        $sessionTotal = $sessionOrders->sum(fn ($order) => (float) $order->total_amount);
+        $hasOpenKitchenOrders = $sessionOrders->contains(
+            fn ($order) => in_array($order->status, [OrderStatus::Pending, OrderStatus::Preparing], true)
+        );
 
         return view('guest.menu', [
             'customerSession' => $customerSession,
             'table' => $customerSession->table,
             'categories' => $categories,
             'activeOrder' => $activeOrder,
+            'sessionOrders' => $sessionOrders,
+            'sessionTotal' => $sessionTotal,
+            'hasOpenKitchenOrders' => $hasOpenKitchenOrders,
         ]);
     }
 
@@ -91,14 +106,13 @@ class CustomerOrderingController extends Controller
         abort_unless($customerSession, 403, 'Guest session not found.');
 
         $activeOrder = Order::query()
-            ->where('table_id', $customerSession->table_id)
-            ->whereIn('status', [OrderStatus::Pending->value, OrderStatus::Preparing->value])
+            ->where('customer_session_id', $customerSession->id)
             ->latest('id')
             ->first();
 
         if (! $activeOrder) {
             return redirect()->route('guest.menu')->withErrors([
-                'order' => 'There is no active order available for checkout.',
+                'order' => 'There is no order available for checkout.',
             ]);
         }
 
@@ -133,6 +147,22 @@ class CustomerOrderingController extends Controller
             $activeSession->update(['last_seen_at' => now()]);
 
             return $activeSession;
+        }
+
+        $otherOpenSessionExists = CustomerSession::query()
+            ->where('table_id', $table->id)
+            ->whereNull('closed_at')
+            ->when(
+                $activeSession,
+                fn ($query) => $query->whereKeyNot($activeSession->id)
+            )
+            ->exists();
+
+        if ($otherOpenSessionExists) {
+            throw new \InvalidArgumentException(sprintf(
+                'Table %s is already occupied in different session.',
+                $table->table_number
+            ));
         }
 
         return CustomerSession::query()->create([

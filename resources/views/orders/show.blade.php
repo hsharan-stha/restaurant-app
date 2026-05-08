@@ -27,11 +27,11 @@
                 @foreach($order->items as $line)
                     <li class="flex justify-between py-2 text-sm">
                         <span>{{ $line->menuItem->name }} × {{ $line->quantity }}</span>
-                        <span class="text-slate-300">${{ number_format((float) $line->price * $line->quantity, 2) }}</span>
+                        <span class="text-slate-300">¥{{ number_format((float) $line->price * $line->quantity, 2) }}</span>
                     </li>
                 @endforeach
             </ul>
-            <p class="mt-4 text-right text-lg font-semibold text-white">${{ number_format($order->total_amount, 2) }}</p>
+            <p class="mt-4 text-right text-lg font-semibold text-white">¥{{ number_format($order->total_amount, 2) }}</p>
         </div>
 
         <div class="space-y-4">
@@ -59,9 +59,9 @@
             @if($order->invoice)
                 <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
                     <h2 class="mb-2 text-sm font-semibold uppercase text-slate-500">Invoice</h2>
-                    <p class="text-sm text-slate-400">Subtotal ${{ number_format($order->invoice->subtotal, 2) }}</p>
-                    <p class="text-sm text-slate-400">Tax ${{ number_format($order->invoice->tax, 2) }}</p>
-                    <p class="text-lg font-semibold text-white">Total ${{ number_format($order->invoice->total, 2) }}</p>
+                    <p class="text-sm text-slate-400">Subtotal ¥{{ number_format($order->invoice->subtotal, 2) }}</p>
+                    <p class="text-sm text-slate-400">Tax ¥{{ number_format($order->invoice->tax, 2) }}</p>
+                    <p class="text-lg font-semibold text-white">Total ¥{{ number_format($order->invoice->total, 2) }}</p>
                     <div class="mt-3 flex flex-wrap gap-2">
                         <a href="{{ route('invoices.show', $order) }}" class="text-sm text-emerald-400 hover:underline">View bill</a>
                         <a href="{{ route('invoices.pdf', $order) }}" class="text-sm text-slate-400 hover:underline">Download PDF</a>

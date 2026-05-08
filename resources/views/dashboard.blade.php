@@ -17,7 +17,7 @@
         <div class="grid min-h-screen gap-0 lg:grid-cols-3">
             @include('partials.order-column', ['title' => 'Pending', 'titleClass' => 'text-amber-400', 'orders' => $pendingOrders])
             @include('partials.order-column', ['title' => 'Preparing', 'titleClass' => 'text-sky-400', 'orders' => $preparingOrders])
-            @include('partials.order-column', ['title' => 'Completed', 'titleClass' => 'text-emerald-400', 'orders' => $completedOrders])
+            @include('partials.completed-order-column', ['title' => 'Completed', 'titleClass' => 'text-emerald-400', 'groups' => $completedOrderGroups])
         </div>
 
         <button

@@ -33,7 +33,7 @@
                             @endphp
                             <p class="mt-1 text-[11px] {{ $order->status === OrderStatus::Pending ? 'text-rose-300' : 'text-sky-300' }} {{ $orderAgeClass }}">{{ $orderAgeLabel }}</p>
                         @endif
-                        <p class="mt-1 text-sm text-emerald-300">${{ number_format($order->total_amount, 2) }}</p>
+                        <p class="mt-1 text-sm text-emerald-300">¥{{ number_format($order->total_amount, 2) }}</p>
                     </div>
                     <div class="flex flex-col items-end gap-1">
                         @include('partials.status-badge', ['status' => $order->status])
@@ -65,7 +65,7 @@
                                 @endphp
                                 <li class="flex items-start justify-between gap-2">
                                     <span class="min-w-0 flex-1 truncate">{{ $line->menuItem->name }} x {{ $line->quantity }}</span>
-                                    <span class="shrink-0 text-slate-400">${{ number_format((float) $line->price * $line->quantity, 2) }}</span>
+                                    <span class="shrink-0 text-slate-400">¥{{ number_format((float) $line->price * $line->quantity, 2) }}</span>
                                     <span class="shrink-0 text-[10px] {{ $itemAgeClass }}">{{ $itemAgeLabel }}</span>
                                 </li>
                             @endforeach

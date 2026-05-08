@@ -29,15 +29,15 @@
                 <tr>
                     <td>{{ $line->menuItem->name }}</td>
                     <td>{{ $line->quantity }}</td>
-                    <td class="right">${{ number_format((float) $line->price * $line->quantity, 2) }}</td>
+                    <td class="right">¥{{ number_format((float) $line->price * $line->quantity, 2) }}</td>
                 </tr>
             @endforeach
         </tbody>
     </table>
     <div class="totals">
-        <p>Subtotal: ${{ number_format($order->invoice->subtotal, 2) }}</p>
-        <p>Tax: ${{ number_format($order->invoice->tax, 2) }}</p>
-        <p><strong>Total: ${{ number_format($order->invoice->total, 2) }}</strong></p>
+        <p>Subtotal: ¥{{ number_format($order->invoice->subtotal, 2) }}</p>
+        <p>Tax: ¥{{ number_format($order->invoice->tax, 2) }}</p>
+        <p><strong>Total: ¥{{ number_format($order->invoice->total, 2) }}</strong></p>
     </div>
 </body>
 </html>

@@ -25,16 +25,16 @@
                     <tr>
                         <td class="py-2 text-slate-200">{{ $line->menuItem->name }}</td>
                         <td class="py-2 text-slate-400">{{ $line->quantity }}</td>
-                        <td class="py-2 text-right text-slate-200">${{ number_format((float) $line->price * $line->quantity, 2) }}</td>
+                        <td class="py-2 text-right text-slate-200">¥{{ number_format((float) $line->price * $line->quantity, 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
 
         <div class="mt-6 space-y-1 text-right text-sm">
-            <p class="text-slate-400">Subtotal <span class="text-white">${{ number_format($order->invoice->subtotal, 2) }}</span></p>
-            <p class="text-slate-400">Tax <span class="text-white">${{ number_format($order->invoice->tax, 2) }}</span></p>
-            <p class="text-lg font-semibold text-emerald-300">Total <span>${{ number_format($order->invoice->total, 2) }}</span></p>
+            <p class="text-slate-400">Subtotal <span class="text-white">¥{{ number_format($order->invoice->subtotal, 2) }}</span></p>
+            <p class="text-slate-400">Tax <span class="text-white">¥{{ number_format($order->invoice->tax, 2) }}</span></p>
+            <p class="text-lg font-semibold text-emerald-300">Total <span>¥{{ number_format($order->invoice->total, 2) }}</span></p>
         </div>
     </div>
 @endsection

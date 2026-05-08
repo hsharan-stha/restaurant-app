@@ -35,18 +35,22 @@ class OrderService
     {
         return DB::transaction(function () use ($customerSession, $tableId, $lines) {
             $table = DiningTable::query()->lockForUpdate()->findOrFail($tableId);
-            $activeOrder = Order::query()
+            $pendingOrder = Order::query()
                 ->where('table_id', $tableId)
-                ->whereIn('status', [OrderStatus::Pending->value, OrderStatus::Preparing->value])
+                ->when(
+                    $customerSession,
+                    fn ($query) => $query->where('customer_session_id', $customerSession->id)
+                )
+                ->where('status', OrderStatus::Pending->value)
                 ->latest('id')
                 ->lockForUpdate()
                 ->first();
 
-            if (! $activeOrder && $table->status !== TableStatus::Available) {
+            if (! $pendingOrder && ! $this->tableHasOpenGuestSession($tableId, $customerSession) && $table->status !== TableStatus::Available) {
                 throw new \InvalidArgumentException('This table is not accepting new guest orders right now.');
             }
 
-            $order = $activeOrder ?: $this->orderRepository->create([
+            $order = $pendingOrder ?: $this->orderRepository->create([
                 'table_id' => $tableId,
                 'customer_session_id' => $customerSession?->id,
                 'status' => OrderStatus::Pending,
@@ -88,10 +92,6 @@ class OrderService
                 $this->createInvoiceForOrder($order->fresh(['items.menuItem']));
             }
 
-            if ($status === OrderStatus::Completed) {
-                $order->table()->update(['status' => TableStatus::Available]);
-            }
-
             return $order->fresh(['table', 'items.menuItem', 'invoice', 'payments']);
         });
     }
@@ -118,5 +118,22 @@ class OrderService
             'tax' => $tax,
             'total' => $total,
         ]);
+    }
+
+    protected function tableHasOpenGuestSession(int $tableId, ?CustomerSession $customerSession): bool
+    {
+        if (! $customerSession) {
+            return false;
+        }
+
+        return Order::query()
+            ->where('table_id', $tableId)
+            ->where('customer_session_id', $customerSession->id)
+            ->whereIn('status', [
+                OrderStatus::Pending->value,
+                OrderStatus::Preparing->value,
+                OrderStatus::Completed->value,
+            ])
+            ->exists();
     }
 }

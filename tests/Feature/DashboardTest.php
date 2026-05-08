@@ -4,10 +4,13 @@ namespace Tests\Feature;
 
 use App\Enums\OrderStatus;
 use App\Models\Category;
+use App\Models\CustomerSession;
 use App\Models\DiningTable;
+use App\Models\Invoice;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payment;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -86,5 +89,64 @@ class DashboardTest extends TestCase
             ->assertJsonFragment([
                 'max_order_item_id' => $newOrderItem->id,
             ]);
+    }
+
+    public function test_dashboard_groups_completed_orders_by_customer_session(): void
+    {
+        $user = User::factory()->create();
+        $table = DiningTable::query()->create([
+            'table_number' => 8,
+            'status' => 'occupied',
+        ]);
+        $session = CustomerSession::query()->create([
+            'table_id' => $table->id,
+            'session_token' => 'dashboard-group-session',
+            'started_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+        $category = Category::query()->create(['name' => 'Dinner']);
+        $item = MenuItem::query()->create([
+            'name' => 'Curry',
+            'price' => 10.00,
+            'category_id' => $category->id,
+        ]);
+
+        $firstOrder = Order::query()->create([
+            'table_id' => $table->id,
+            'customer_session_id' => $session->id,
+            'status' => OrderStatus::Completed,
+            'total_amount' => 10.00,
+        ]);
+        $secondOrder = Order::query()->create([
+            'table_id' => $table->id,
+            'customer_session_id' => $session->id,
+            'status' => OrderStatus::Completed,
+            'total_amount' => 20.00,
+        ]);
+
+        foreach ([$firstOrder, $secondOrder] as $index => $order) {
+            OrderItem::query()->create([
+                'order_id' => $order->id,
+                'menu_item_id' => $item->id,
+                'quantity' => $index + 1,
+                'price' => 10.00,
+            ]);
+            Invoice::query()->create([
+                'order_id' => $order->id,
+                'subtotal' => ($index + 1) * 10.00,
+                'tax' => ($index + 1) * 0.80,
+                'total' => ($index + 1) * 10.80,
+            ]);
+        }
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Session group')
+            ->assertSee('2 orders')
+            ->assertSee('Order #'.$firstOrder->id)
+            ->assertSee('Order #'.$secondOrder->id)
+            ->assertSee('¥32.40');
     }
 }

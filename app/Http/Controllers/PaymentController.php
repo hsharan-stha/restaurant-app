@@ -17,17 +17,23 @@ class PaymentController extends Controller
 
     public function create(Order $order): View|RedirectResponse
     {
-        $order->load(['invoice', 'table', 'payments']);
+        $order->load(['invoice', 'table', 'payments', 'customerSession']);
         if (! $order->invoice) {
             return redirect()->route('orders.show', $order)
                 ->withErrors(['payment' => 'Complete the order before paying (status must be completed).']);
         }
 
-        if ($order->payments()->where('status', \App\Enums\PaymentStatus::Completed)->exists()) {
+        $checkoutOrders = $this->paymentService->getCheckoutOrders($order);
+
+        if ($checkoutOrders->isEmpty()) {
             return redirect()->route('orders.show', $order)->with('status', 'Already paid.');
         }
 
-        return view('payments.create', compact('order'));
+        $subtotal = $checkoutOrders->sum(fn ($checkoutOrder) => (float) $checkoutOrder->invoice->subtotal);
+        $tax = $checkoutOrders->sum(fn ($checkoutOrder) => (float) $checkoutOrder->invoice->tax);
+        $total = $checkoutOrders->sum(fn ($checkoutOrder) => (float) $checkoutOrder->invoice->total);
+
+        return view('payments.create', compact('order', 'checkoutOrders', 'subtotal', 'tax', 'total'));
     }
 
     public function store(StorePaymentRequest $request, Order $order): RedirectResponse

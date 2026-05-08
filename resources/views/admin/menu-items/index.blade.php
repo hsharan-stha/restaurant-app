@@ -22,7 +22,7 @@
                     <tr>
                         <td class="px-4 py-3 text-slate-200">{{ $item->name }}</td>
                         <td class="px-4 py-3 text-slate-400">{{ $item->category->name }}</td>
-                        <td class="px-4 py-3 text-emerald-300">${{ number_format($item->price, 2) }}</td>
+                        <td class="px-4 py-3 text-emerald-300">¥{{ number_format($item->price, 2) }}</td>
                         <td class="px-4 py-3 text-right">
                             <a href="{{ route('menu-items.edit', $item) }}" class="text-emerald-400 hover:underline">Edit</a>
                             <form action="{{ route('menu-items.destroy', $item) }}" method="POST" class="inline" onsubmit="return confirm('Delete?');">

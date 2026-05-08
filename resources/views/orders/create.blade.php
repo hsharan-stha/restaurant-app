@@ -34,7 +34,7 @@
                             class="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white">
                         <option value="">Menu item</option>
                         @foreach($menuItems as $item)
-                            <option value="{{ $item->id }}">{{ $item->name }} — ${{ number_format($item->price, 2) }} ({{ $item->category->name }})</option>
+                            <option value="{{ $item->id }}">{{ $item->name }} — ¥{{ number_format($item->price, 2) }} ({{ $item->category->name }})</option>
                         @endforeach
                     </select>
                     <input type="number" name="items[0][quantity]" value="1" min="1" required
@@ -52,7 +52,7 @@
                     class="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white">
                 <option value="">Menu item</option>
                 @foreach($menuItems as $item)
-                    <option value="{{ $item->id }}">{{ $item->name }} — ${{ number_format($item->price, 2) }}</option>
+                    <option value="{{ $item->id }}">{{ $item->name }} — ¥{{ number_format($item->price, 2) }}</option>
                 @endforeach
             </select>
             <input type="number" name="items[__I__][quantity]" value="1" min="1" required

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\OrderStatus;
 use App\Models\OrderItem;
 use App\Repositories\Contracts\OrderRepositoryInterface;
+use Illuminate\Support\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -18,6 +19,7 @@ class DashboardController extends Controller
     public function __invoke(): View
     {
         $orders = $this->orderRepository->allWithRelations();
+        $completedOrders = $orders->filter(fn ($o) => $o->status === OrderStatus::Completed)->values();
         $latestCheckoutRequestAt = $orders
             ->filter(fn ($o) => $o->checkout_requested_at)
             ->max(fn ($o) => $o->checkout_requested_at?->toIso8601String());
@@ -26,10 +28,37 @@ class DashboardController extends Controller
         return view('dashboard', [
             'pendingOrders' => $orders->filter(fn ($o) => $o->status === OrderStatus::Pending)->values(),
             'preparingOrders' => $orders->filter(fn ($o) => $o->status === OrderStatus::Preparing)->values(),
-            'completedOrders' => $orders->filter(fn ($o) => $o->status === OrderStatus::Completed)->values(),
+            'completedOrderGroups' => $this->buildCompletedOrderGroups($completedOrders),
             'latestCheckoutRequestAt' => $latestCheckoutRequestAt,
             'latestOrderItemId' => $latestOrderItemId,
         ]);
+    }
+
+    protected function buildCompletedOrderGroups(Collection $completedOrders): Collection
+    {
+        return $completedOrders
+            ->groupBy(fn ($order) => $order->customer_session_id
+                ? 'session-'.$order->customer_session_id
+                : 'order-'.$order->id)
+            ->map(function (Collection $group) {
+                $firstOrder = $group->first();
+                $checkoutOrder = $group->first(
+                    fn ($order) => $order->invoice
+                        && ! $order->payments->contains(fn ($payment) => $payment->status->value === 'completed')
+                );
+
+                return [
+                    'id' => $firstOrder->customer_session_id ?: $firstOrder->id,
+                    'table_number' => $firstOrder->table?->table_number,
+                    'status' => OrderStatus::Completed,
+                    'customer_session_id' => $firstOrder->customer_session_id,
+                    'orders' => $group->values(),
+                    'order_count' => $group->count(),
+                    'display_total' => $group->sum(fn ($order) => (float) ($order->invoice->total ?? $order->total_amount)),
+                    'checkout_order' => $checkoutOrder,
+                ];
+            })
+            ->values();
     }
 
     public function poll(Request $request): JsonResponse
