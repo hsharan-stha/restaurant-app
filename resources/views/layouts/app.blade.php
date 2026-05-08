@@ -7,7 +7,7 @@
     <title>@yield('title', 'Dashboard') — {{ config('app.name', 'Restaurant OS') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
+<body class="app-theme min-h-screen bg-slate-950 text-slate-100 antialiased">
     <main class="mx-auto max-w-7xl px-4 py-8">
         @if(session('status'))
             <div class="mb-6 rounded-lg border border-emerald-600/40 bg-emerald-950/40 px-4 py-3 text-emerald-200">{{ session('status') }}</div>

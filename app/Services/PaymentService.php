@@ -59,7 +59,7 @@ class PaymentService
     public function getCheckoutOrders(Order $order): Collection
     {
         $baseQuery = Order::query()
-            ->with(['invoice', 'payments', 'table'])
+            ->with(['invoice', 'payments', 'table', 'items.menuItem'])
             ->where('table_id', $order->table_id)
             ->where('status', OrderStatus::Completed->value);
 

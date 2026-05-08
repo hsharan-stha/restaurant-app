@@ -13,38 +13,11 @@
                 <div class="space-y-4">
                     <div class="space-y-4">
                         <div>
-                            <p class="text-sm font-semibold uppercase tracking-[0.22em] text-orange-600">Welcome to your table</p>
+                            <p class="text-base font-semibold uppercase tracking-[0.22em] text-orange-700">Welcome to your table</p>
                             <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Table {{ $table->table_number }}</h1>
-                            <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-700 sm:text-base">
-                                Browse by category, add items in a few taps, and send repeat orders anytime without calling staff.
-                            </p>
-                        </div>
-
-                        <div class="grid gap-3 sm:grid-cols-3">
-                            <div class="hotpepper-stat-card">
-                                <p class="hotpepper-stat-label">Started</p>
-                                <p class="hotpepper-stat-value">{{ $customerSession->started_at->format('H:i') }}</p>
-                            </div>
-                            <div class="hotpepper-stat-card">
-                                <p class="hotpepper-stat-label">Order status</p>
-                                <p class="hotpepper-stat-value">{{ $activeOrder ? ucfirst($activeOrder->status->value) : 'Ready' }}</p>
-                            </div>
-                            <div class="hotpepper-stat-card">
-                                <p class="hotpepper-stat-label">Session total</p>
-                                <p class="hotpepper-stat-value">¥{{ number_format((float) $sessionTotal, 0) }}</p>
-                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
-
-        <section class="sticky top-0 z-20 border-y border-orange-200/80 bg-white/92 backdrop-blur">
-            <div class="mx-auto flex max-w-6xl gap-3 overflow-x-auto px-4 py-3 sm:px-6 lg:px-8">
-                @foreach($categories as $category)
-                    <a href="#category-{{ $category->id }}" class="hotpepper-tab">{{ $category->name }}</a>
-                @endforeach
-                <a href="#order-summary" class="hotpepper-tab hotpepper-tab-accent">My order</a>
             </div>
         </section>
 
@@ -58,13 +31,15 @@
                 </div>
                 <button type="button" data-close-drawer class="hotpepper-drawer-close">Close</button>
             </div>
-            <div class="space-y-3 px-4 py-4">
+            <div class="customer-scroll max-h-[calc(100vh-6rem)] overflow-y-auto px-4 py-4">
+                <div class="space-y-3">
                 @foreach($categories as $category)
                     <a href="#category-{{ $category->id }}" class="hotpepper-drawer-link" data-drawer-link>
                         <span>{{ $category->name }}</span>
                         <span>{{ $category->menuItems->count() }}</span>
                     </a>
                 @endforeach
+                </div>
             </div>
         </aside>
 
@@ -81,29 +56,29 @@
                         </div>
                         <span class="hotpepper-ticket-status">{{ $activeOrder ? $activeOrder->status->value : 'completed' }}</span>
                     </div>
-                    <div class="mt-4 flex gap-3 overflow-x-auto pb-1">
+                    <div class="customer-scroll mt-4 flex gap-3 overflow-x-auto pb-1">
                         <div class="min-w-[220px] rounded-2xl bg-orange-50 px-4 py-4">
-                            <p class="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">Session total</p>
-                            <p class="mt-2 text-3xl font-black text-slate-950">¥{{ number_format((float) $sessionTotal, 0) }}</p>
+                            <p class="text-sm font-bold uppercase tracking-[0.18em] text-orange-600">Session total</p>
+                            <p class="mt-2 text-3xl font-black text-slate-950">&yen;{{ number_format((float) $sessionTotal, 0) }}</p>
                         </div>
                         @foreach($sessionOrders as $sessionOrder)
                             <div class="min-w-[320px] rounded-2xl bg-[#fff7f2] px-4 py-4">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="min-w-0">
-                                        <p class="font-semibold text-slate-900">Order #{{ $sessionOrder->id }}</p>
-                                        <p class="mt-1 text-sm text-slate-500">{{ ucfirst($sessionOrder->status->value) }}</p>
+                                        <p class="text-[21px] font-semibold text-slate-900">Order #{{ $sessionOrder->id }}</p>
+                                        <p class="mt-1 text-base text-slate-500">{{ ucfirst($sessionOrder->status->value) }}</p>
                                     </div>
-                                    <p class="shrink-0 font-bold text-slate-950">¥{{ number_format((float) $sessionOrder->total_amount, 0) }}</p>
+                                    <p class="shrink-0 text-[21px] font-bold text-slate-950">&yen;{{ number_format((float) $sessionOrder->total_amount, 0) }}</p>
                                 </div>
                                 <div class="mt-4 space-y-2">
                                     @foreach($sessionOrder->items as $item)
                                         <div class="rounded-xl bg-white/80 px-3 py-3">
                                             <div class="flex items-start justify-between gap-3">
                                                 <div class="min-w-0">
-                                                    <p class="font-semibold text-slate-900">{{ $item->menuItem->name }}</p>
-                                                    <p class="mt-1 text-sm text-slate-500">{{ $item->quantity }} x ¥{{ number_format((float) $item->price, 0) }}</p>
+                                                    <p class="text-[21px] font-semibold text-slate-900">{{ $item->menuItem->name }}</p>
+                                                    <p class="mt-1 text-base text-slate-500">{{ $item->quantity }} x &yen;{{ number_format((float) $item->price, 0) }}</p>
                                                 </div>
-                                                <p class="shrink-0 font-bold text-slate-950">¥{{ number_format((float) $item->price * (int) $item->quantity, 0) }}</p>
+                                                <p class="shrink-0 text-[21px] font-bold text-slate-950">&yen;{{ number_format((float) $item->price * (int) $item->quantity, 0) }}</p>
                                             </div>
                                             @if(in_array($sessionOrder->status, [OrderStatus::Pending, OrderStatus::Preparing], true))
                                                 <div
@@ -128,8 +103,8 @@
 
         <div class="mx-auto grid max-w-6xl gap-6 px-4 py-5 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)_370px] lg:px-8">
             <aside class="hidden lg:block lg:sticky lg:top-24 lg:self-start">
-                <div class="hotpepper-category-panel">
-                    <p class="text-xs font-bold uppercase tracking-[0.24em] text-orange-500">Browse</p>
+                <div class="hotpepper-category-panel customer-scroll lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+                    <p class="text-sm font-bold uppercase tracking-[0.24em] text-orange-600">Browse</p>
                     <h2 class="mt-1 text-xl font-black text-slate-950">Food categories</h2>
                     <div class="mt-4 space-y-3">
                         @foreach($categories as $category)
@@ -147,10 +122,10 @@
                     <section id="category-{{ $category->id }}" class="space-y-4 scroll-mt-28">
                         <div class="flex items-end justify-between gap-4">
                             <div>
-                                <p class="text-xs font-bold uppercase tracking-[0.25em] text-orange-500">Category</p>
-                                <h2 class="mt-1 text-2xl font-black text-slate-950">{{ $category->name }}</h2>
+                                <p class="text-sm font-bold uppercase tracking-[0.25em] text-orange-600">Category</p>
+                                <h2 class="mt-1 text-[21px] font-black text-slate-950 sm:text-2xl">{{ $category->name }}</h2>
                             </div>
-                            <p class="text-sm text-slate-500">{{ $category->menuItems->count() }} items</p>
+                            <p class="text-base text-slate-500">{{ $category->menuItems->count() }} items</p>
                         </div>
 
                         <div class="grid gap-4">
@@ -164,31 +139,28 @@
                                 >
                                     <div class="flex flex-col gap-4 sm:flex-row">
                                         <div class="hotpepper-menu-thumb">
-                                            @if($item->image)
-                                                <img src="{{ $item->image }}" alt="{{ $item->name }}" class="h-full w-full object-cover">
+                                            @if($item->image_url)
+                                                <img src="{{ $item->image_url }}" alt="{{ $item->name }}" class="h-full w-full object-cover">
                                             @else
                                                 <span>{{ strtoupper(substr($item->name, 0, 1)) }}</span>
                                             @endif
                                         </div>
 
-                                        <div class="min-w-0 flex-1">
-                                            <div class="flex items-start justify-between gap-4">
+                                        <div class="hotpepper-menu-content min-w-0 flex-1">
+                                            <div class="hotpepper-menu-heading">
                                                 <div class="min-w-0">
-                                                    <div class="flex flex-wrap items-center gap-2">
-                                                        <h3 class="truncate text-lg font-black text-slate-950">{{ $item->name }}</h3>
+                                                    <div class="hotpepper-menu-title-wrap">
+                                                        <h3 class="truncate text-[21px] font-black text-slate-950">{{ $item->name }}</h3>
                                                         <span class="hotpepper-chip">{{ $category->name }}</span>
                                                     </div>
-                                                    <p class="mt-2 text-sm leading-6 text-slate-500">
-                                                        Freshly prepared and ready to add to your table order.
-                                                    </p>
                                                 </div>
-                                                <p class="shrink-0 text-lg font-black text-orange-600">¥{{ number_format((float) $item->price, 0) }}</p>
+                                                <p class="hotpepper-menu-price text-[21px] font-black">&yen;{{ number_format((float) $item->price, 0) }}</p>
                                             </div>
 
-                                            <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div class="hotpepper-menu-footer">
                                                 <div class="hotpepper-stepper" aria-label="Choose quantity">
                                                     <button type="button" class="hotpepper-stepper-btn" data-quantity-down>-</button>
-                                                    <span class="min-w-8 text-center text-sm font-bold text-slate-900" data-quantity-value>0</span>
+                                                    <span class="min-w-8 text-center text-[21px] font-bold text-slate-900" data-quantity-value>0</span>
                                                     <button type="button" class="hotpepper-stepper-btn" data-quantity-up>+</button>
                                                 </div>
                                             </div>
@@ -203,40 +175,38 @@
 
             <aside id="order-summary" class="hidden lg:sticky lg:top-24 lg:block lg:self-start">
                 <div class="hotpepper-cart-card lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col">
-                    <div class="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+                    <div class="customer-scroll lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
                         <div class="flex items-start justify-between gap-4">
                             <div>
-                                <p class="text-xs font-bold uppercase tracking-[0.25em] text-orange-500">My order</p>
+                                <p class="text-sm font-bold uppercase tracking-[0.25em] text-orange-600">My order</p>
                                 <h2 class="mt-1 text-2xl font-black text-slate-950">Ready to send</h2>
-                                <p class="mt-2 text-sm leading-6 text-slate-500">Review your new items before sending them to the kitchen.</p>
                             </div>
-                            <span class="rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-700">Table {{ $table->table_number }}</span>
                         </div>
 
                         <form method="POST" action="{{ route('guest.orders.store') }}" id="guest-order-form" class="mt-6">
                             @csrf
                             <div id="guest-cart-lines" class="space-y-3">
-                                <p class="rounded-2xl border border-dashed border-orange-200 bg-orange-50/70 px-4 py-4 text-sm text-slate-500" id="guest-cart-empty">
+                                <p class="rounded-2xl border border-dashed border-orange-200 bg-orange-50/70 px-4 py-4 text-[21px] text-slate-500" id="guest-cart-empty">
                                     Choose items from the menu to start your order.
                                 </p>
                             </div>
                             <div id="guest-cart-hidden-inputs"></div>
 
                             <div class="mt-6 space-y-3 border-t border-orange-100 pt-4">
-                                <div class="flex items-center justify-between text-sm">
+                                <div class="flex items-center justify-between text-[21px]">
                                     <span class="text-slate-500">Items selected</span>
                                     <span class="font-bold text-slate-950" id="guest-cart-count">0</span>
                                 </div>
-                                <div class="flex items-center justify-between text-base">
+                                <div class="flex items-center justify-between text-[21px]">
                                     <span class="font-semibold text-slate-700">New order subtotal</span>
-                                    <span class="text-2xl font-black text-slate-950" id="guest-cart-total">¥0</span>
+                                    <span class="text-2xl font-black text-slate-950" id="guest-cart-total">&yen;0</span>
                                 </div>
                             </div>
 
                             <button
                                 type="submit"
                                 id="guest-submit-button"
-                                class="mt-6 w-full rounded-2xl bg-[#e74f1d] px-5 py-4 text-sm font-bold uppercase tracking-[0.2em] text-white shadow-[0_18px_45px_-22px_rgba(231,79,29,0.8)] transition hover:bg-[#cf4315]"
+                                class="mt-6 w-full rounded-2xl bg-[#b45309] px-5 py-4 text-base font-bold uppercase tracking-[0.2em] text-white shadow-[0_18px_45px_-22px_rgba(180,83,9,0.8)] transition hover:bg-[#92400e]"
                             >
                                 Place order
                             </button>
@@ -244,7 +214,7 @@
 
                         @if($sessionOrders->isNotEmpty())
                             @if($hasOpenKitchenOrders)
-                                <div class="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-sm text-amber-800">
+                                <div class="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-[21px] text-amber-800">
                                     Checkout can be requested now, but some items are still pending or preparing.
                                 </div>
                             @endif
@@ -252,7 +222,7 @@
                                 @csrf
                                 <button
                                     type="submit"
-                                    class="w-full rounded-2xl border border-orange-300 bg-orange-50 px-5 py-4 text-sm font-bold uppercase tracking-[0.18em] text-orange-700 transition hover:bg-orange-100"
+                                    class="w-full rounded-2xl border border-orange-300 bg-orange-50 px-5 py-4 text-base font-bold uppercase tracking-[0.18em] text-orange-700 transition hover:bg-orange-100"
                                 >
                                     Proceed to checkout
                                 </button>
@@ -271,32 +241,32 @@
                 </div>
                 <button type="button" data-close-drawer class="hotpepper-drawer-close">Close</button>
             </div>
-            <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-28">
+            <div class="customer-scroll min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-28">
                 <div class="hotpepper-cart-card border-0 shadow-none">
                     <form method="POST" action="{{ route('guest.orders.store') }}" id="guest-order-form-mobile">
                         @csrf
                         <div id="guest-cart-lines-mobile" class="space-y-3">
-                            <p class="rounded-2xl border border-dashed border-orange-200 bg-orange-50/70 px-4 py-4 text-sm text-slate-500" id="guest-cart-empty-mobile">
+                            <p class="rounded-2xl border border-dashed border-orange-200 bg-orange-50/70 px-4 py-4 text-[21px] text-slate-500" id="guest-cart-empty-mobile">
                                 Choose items from the menu to start your order.
                             </p>
                         </div>
                         <div id="guest-cart-hidden-inputs-mobile"></div>
 
                         <div class="mt-6 space-y-3 border-t border-orange-100 pt-4">
-                            <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center justify-between text-[21px]">
                                 <span class="text-slate-500">Items selected</span>
                                 <span class="font-bold text-slate-950" id="guest-cart-count-mobile">0</span>
                             </div>
-                            <div class="flex items-center justify-between text-base">
+                            <div class="flex items-center justify-between text-[21px]">
                                 <span class="font-semibold text-slate-700">New order subtotal</span>
-                                <span class="text-2xl font-black text-slate-950" id="guest-cart-total-mobile">¥0</span>
+                                <span class="text-2xl font-black text-slate-950" id="guest-cart-total-mobile">&yen;0</span>
                             </div>
                         </div>
 
                         <button
                             type="submit"
                             id="guest-submit-button-mobile"
-                            class="mt-6 w-full rounded-2xl bg-[#e74f1d] px-5 py-4 text-sm font-bold uppercase tracking-[0.2em] text-white shadow-[0_18px_45px_-22px_rgba(231,79,29,0.8)] transition hover:bg-[#cf4315]"
+                            class="mt-6 w-full rounded-2xl bg-[#b45309] px-5 py-4 text-base font-bold uppercase tracking-[0.2em] text-white shadow-[0_18px_45px_-22px_rgba(180,83,9,0.8)] transition hover:bg-[#92400e]"
                         >
                             Place order
                         </button>
@@ -304,7 +274,7 @@
 
                     @if($sessionOrders->isNotEmpty())
                         @if($hasOpenKitchenOrders)
-                            <div class="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-sm text-amber-800">
+                            <div class="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-[21px] text-amber-800">
                                 Checkout can be requested now, but some items are still pending or preparing.
                             </div>
                         @endif
@@ -312,7 +282,7 @@
                             @csrf
                             <button
                                 type="submit"
-                                class="w-full rounded-2xl border border-orange-300 bg-orange-50 px-5 py-4 text-sm font-bold uppercase tracking-[0.18em] text-orange-700 transition hover:bg-orange-100"
+                                class="w-full rounded-2xl border border-orange-300 bg-orange-50 px-5 py-4 text-base font-bold uppercase tracking-[0.18em] text-orange-700 transition hover:bg-orange-100"
                             >
                                 Proceed to checkout
                             </button>
@@ -324,11 +294,11 @@
 
         <div class="hotpepper-mobile-bar lg:hidden">
             <button type="button" id="guest-open-category" class="hotpepper-mobile-side-btn">
-                <span class="text-xs font-bold uppercase tracking-[0.22em] text-orange-500">Left</span>
-                <span class="mt-1 text-sm font-semibold text-slate-900">Food categories</span>
+                <span class="text-sm font-bold uppercase tracking-[0.22em] text-orange-600">Left</span>
+                <span class="mt-1 text-base font-semibold text-slate-900">Food categories</span>
             </button>
             <button type="button" id="guest-open-order" class="hotpepper-mobile-bar-btn">
-                <span id="guest-cart-bar-total">¥0</span>
+                <span id="guest-cart-bar-total">&yen;0</span>
                 <span>Order <span id="guest-cart-bar-count">0</span></span>
             </button>
         </div>
@@ -361,7 +331,7 @@
             const reorderGroups = () => document.querySelectorAll('[data-reorder-id]');
             const cart = new Map();
 
-            const currency = (amount) => `¥${Math.round(amount).toLocaleString('ja-JP')}`;
+            const currency = (amount) => `\u00A5${Math.round(amount).toLocaleString('ja-JP')}`;
 
             const addToCart = (id, name, price, quantityToAdd = 1) => {
                 const current = cart.get(id);
@@ -450,16 +420,16 @@
                     line.innerHTML = `
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
-                                <p class="truncate font-semibold text-slate-900">${entry.name}</p>
-                                <p class="mt-1 text-sm text-slate-500">${entry.quantity} x ${currency(entry.price)}</p>
+                                <p class="truncate text-[21px] font-semibold text-slate-900">${entry.name}</p>
+                                <p class="mt-1 text-base text-slate-500">${entry.quantity} x ${currency(entry.price)}</p>
                                 <div class="mt-3 flex items-center gap-2">
                                     <button type="button" class="hotpepper-cart-qty-btn" data-decrease-id="${entry.id}">-1</button>
                                     <button type="button" class="hotpepper-cart-qty-btn" data-increase-id="${entry.id}" data-name="${entry.name}" data-price="${entry.price}">+1</button>
                                 </div>
                             </div>
                             <div class="text-right">
-                                <p class="font-bold text-slate-950">${currency(entry.quantity * entry.price)}</p>
-                                <button type="button" class="mt-2 text-xs font-semibold uppercase tracking-[0.15em] text-rose-500" data-remove-id="${entry.id}">Remove</button>
+                                <p class="text-[21px] font-bold text-slate-950">${currency(entry.quantity * entry.price)}</p>
+                                <button type="button" class="mt-2 text-sm font-semibold uppercase tracking-[0.15em] text-rose-500" data-remove-id="${entry.id}">Remove</button>
                             </div>
                         </div>
                     `;

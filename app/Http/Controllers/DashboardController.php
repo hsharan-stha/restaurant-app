@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\OrderStatus;
 use App\Models\OrderItem;
 use App\Repositories\Contracts\OrderRepositoryInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,10 +17,37 @@ class DashboardController extends Controller
         protected OrderRepositoryInterface $orderRepository
     ) {}
 
-    public function __invoke(): View
+    public function __invoke(Request $request): View
     {
         $orders = $this->orderRepository->allWithRelations();
-        $completedOrders = $orders->filter(fn ($o) => $o->status === OrderStatus::Completed)->values();
+        $completedFilterEnd = $this->parseCompletedDate(
+            $request->query('completed_to'),
+            now()
+        );
+        $completedFilterStart = $this->parseCompletedDate(
+            $request->query('completed_from'),
+            $completedFilterEnd->copy()->subDay()
+        );
+
+        if ($completedFilterStart->gt($completedFilterEnd)) {
+            [$completedFilterStart, $completedFilterEnd] = [$completedFilterEnd, $completedFilterStart];
+        }
+
+        $completedOrders = $orders
+            ->filter(fn ($o) => $o->status === OrderStatus::Completed)
+            ->filter(function ($order) use ($completedFilterStart, $completedFilterEnd) {
+                $completedAt = $order->updated_at ?? $order->created_at;
+
+                if (! $completedAt) {
+                    return false;
+                }
+
+                return $completedAt->between(
+                    $completedFilterStart->copy()->startOfDay(),
+                    $completedFilterEnd->copy()->endOfDay()
+                );
+            })
+            ->values();
         $latestCheckoutRequestAt = $orders
             ->filter(fn ($o) => $o->checkout_requested_at)
             ->max(fn ($o) => $o->checkout_requested_at?->toIso8601String());
@@ -29,9 +57,24 @@ class DashboardController extends Controller
             'pendingOrders' => $orders->filter(fn ($o) => $o->status === OrderStatus::Pending)->values(),
             'preparingOrders' => $orders->filter(fn ($o) => $o->status === OrderStatus::Preparing)->values(),
             'completedOrderGroups' => $this->buildCompletedOrderGroups($completedOrders),
+            'completedFilterFrom' => $completedFilterStart->toDateString(),
+            'completedFilterTo' => $completedFilterEnd->toDateString(),
             'latestCheckoutRequestAt' => $latestCheckoutRequestAt,
             'latestOrderItemId' => $latestOrderItemId,
         ]);
+    }
+
+    protected function parseCompletedDate(mixed $value, Carbon $default): Carbon
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return $default->copy();
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable) {
+            return $default->copy();
+        }
     }
 
     protected function buildCompletedOrderGroups(Collection $completedOrders): Collection

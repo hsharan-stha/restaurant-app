@@ -10,14 +10,20 @@
 
     <div
         id="live-orders-dashboard"
-        class="relative min-h-screen bg-slate-950"
+        class="restaurant-dashboard-theme relative min-h-screen"
         data-latest-checkout-request-at="{{ $latestCheckoutRequestAt ?? '' }}"
         data-latest-order-item-id="{{ $latestOrderItemId ?? 0 }}"
     >
-        <div class="grid min-h-screen gap-0 lg:grid-cols-3">
-            @include('partials.order-column', ['title' => 'Pending', 'titleClass' => 'text-amber-400', 'orders' => $pendingOrders])
-            @include('partials.order-column', ['title' => 'Preparing', 'titleClass' => 'text-sky-400', 'orders' => $preparingOrders])
-            @include('partials.completed-order-column', ['title' => 'Completed', 'titleClass' => 'text-emerald-400', 'groups' => $completedOrderGroups])
+        <div class="grid h-screen grid-rows-3 gap-0 lg:grid-cols-3 lg:grid-rows-1">
+            @include('partials.order-column', ['title' => 'Pending', 'titleClass' => 'text-amber-400', 'orders' => $pendingOrders, 'showCount' => true])
+            @include('partials.order-column', ['title' => 'Preparing', 'titleClass' => 'text-sky-400', 'orders' => $preparingOrders, 'showCount' => true])
+            @include('partials.completed-order-column', [
+                'title' => 'Completed',
+                'titleClass' => 'text-emerald-400',
+                'groups' => $completedOrderGroups,
+                'completedFilterFrom' => $completedFilterFrom,
+                'completedFilterTo' => $completedFilterTo,
+            ])
         </div>
 
         <button
@@ -25,53 +31,53 @@
             id="dashboard-action-toggle"
             aria-controls="dashboard-action-panel"
             aria-expanded="false"
-            class="fixed bottom-5 right-5 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-3xl font-light text-white shadow-2xl shadow-emerald-950/50 transition hover:scale-105 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+            class="fixed bottom-5 right-5 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-orange-500 text-3xl font-light text-white shadow-2xl shadow-orange-950/50 transition hover:scale-105 hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-300"
         >
             <span aria-hidden="true">+</span>
         </button>
 
-        <div id="dashboard-action-backdrop" class="pointer-events-none fixed inset-0 z-40 bg-slate-950/0 opacity-0 transition duration-200"></div>
+        <div id="dashboard-action-backdrop" class="pointer-events-none fixed inset-0 z-40 bg-[#120906]/0 opacity-0 transition duration-200"></div>
 
         <aside
             id="dashboard-action-panel"
-            class="pointer-events-none fixed right-0 top-0 z-50 flex h-screen w-full max-w-sm translate-x-full flex-col border-l border-slate-800 bg-slate-950/95 opacity-0 shadow-2xl transition duration-300 sm:w-[24rem]"
+            class="restaurant-dashboard-drawer pointer-events-none fixed right-0 top-0 z-50 flex h-screen w-full max-w-sm translate-x-full flex-col opacity-0 shadow-2xl transition duration-300 sm:w-[24rem]"
             aria-hidden="true"
         >
-            <div class="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+            <div class="flex items-center justify-between border-b border-orange-200/15 px-5 py-4">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-400">Admin Info</p>
+                    <p class="restaurant-dashboard-kicker text-xs font-semibold uppercase tracking-[0.35em]">Admin Info</p>
                     <h2 class="mt-2 text-2xl font-semibold text-white">{{ auth()->user()->name }}</h2>
-                    <p class="mt-1 text-sm text-slate-400">{{ auth()->user()->email }}</p>
+                    <p class="restaurant-dashboard-muted mt-1 text-sm">{{ auth()->user()->email }}</p>
                 </div>
                 <button
                     type="button"
                     id="dashboard-action-close"
-                    class="rounded-full border border-slate-700 px-3 py-1 text-sm text-slate-300 hover:border-white hover:text-white"
+                    class="rounded-full border border-orange-200/20 px-3 py-1 text-sm text-orange-100 hover:border-orange-200 hover:text-white"
                 >
                     Close
                 </button>
             </div>
 
-            <div class="flex-1 space-y-6 overflow-y-auto px-5 py-5">
-                <div class="rounded-3xl border border-slate-800 bg-slate-900/80 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Role</p>
+            <div class="restaurant-dashboard-scroll flex-1 space-y-6 overflow-y-auto px-5 py-5">
+                <div class="restaurant-dashboard-inset rounded-3xl border p-4">
+                    <p class="restaurant-dashboard-kicker text-xs font-semibold uppercase tracking-[0.25em]">Role</p>
                     <p class="mt-2 text-lg font-semibold text-white">{{ auth()->user()->isAdmin() ? 'Admin' : 'Staff' }}</p>
-                    <p class="mt-1 text-sm text-slate-400">Quick actions for managing orders and restaurant data.</p>
+                    <p class="restaurant-dashboard-muted mt-1 text-sm">Quick actions for managing orders and restaurant data.</p>
                 </div>
 
                 <div class="space-y-3">
-                    <a href="{{ route('orders.create') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl bg-emerald-600 px-4 py-4 text-base font-semibold text-white hover:bg-emerald-500">
+                    <a href="{{ route('orders.create') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl bg-orange-600 px-4 py-4 text-base font-semibold text-white hover:bg-orange-500">
                         New order
                     </a>
 
                     @if(auth()->user()->isAdmin())
-                        <a href="{{ route('categories.index') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl border border-slate-700 bg-slate-900 px-4 py-4 text-base font-semibold text-white hover:border-sky-500 hover:bg-slate-800">
+                        <a href="{{ route('categories.index') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl border border-orange-200/20 bg-white/5 px-4 py-4 text-base font-semibold text-white hover:border-orange-300 hover:bg-white/10">
                             Category
                         </a>
-                        <a href="{{ route('menu-items.index') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl border border-slate-700 bg-slate-900 px-4 py-4 text-base font-semibold text-white hover:border-sky-500 hover:bg-slate-800">
+                        <a href="{{ route('menu-items.index') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl border border-orange-200/20 bg-white/5 px-4 py-4 text-base font-semibold text-white hover:border-orange-300 hover:bg-white/10">
                             Item
                         </a>
-                        <a href="{{ route('dining-tables.index') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl border border-slate-700 bg-slate-900 px-4 py-4 text-base font-semibold text-white hover:border-sky-500 hover:bg-slate-800">
+                        <a href="{{ route('dining-tables.index') }}" target="_blank" rel="noopener noreferrer" class="block rounded-2xl border border-orange-200/20 bg-white/5 px-4 py-4 text-base font-semibold text-white hover:border-orange-300 hover:bg-white/10">
                             Table
                         </a>
                     @endif

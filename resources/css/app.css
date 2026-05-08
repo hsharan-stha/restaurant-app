@@ -32,18 +32,177 @@
     animation: order-row-recent-red 0.8s ease-in-out 6;
 }
 
+.restaurant-dashboard-theme {
+    background:
+        radial-gradient(circle at top left, rgba(251, 191, 36, 0.14), transparent 30%),
+        radial-gradient(circle at top right, rgba(249, 115, 22, 0.16), transparent 26%),
+        linear-gradient(180deg, #2f160b 0%, #1a0e08 52%, #120906 100%);
+    color: #fff5eb;
+    font-size: 26px;
+}
+
+.restaurant-dashboard-panel {
+    border-color: rgba(251, 146, 60, 0.18);
+    background:
+        linear-gradient(180deg, rgba(61, 32, 18, 0.94), rgba(28, 16, 11, 0.96));
+    box-shadow: inset 0 1px 0 rgba(255, 237, 213, 0.04);
+}
+
+.restaurant-dashboard-panel:hover {
+    background:
+        linear-gradient(180deg, rgba(72, 38, 21, 0.96), rgba(31, 17, 12, 0.98));
+}
+
+.restaurant-dashboard-inset {
+    border-color: rgba(251, 146, 60, 0.16);
+    background: rgba(22, 11, 7, 0.68);
+}
+
+.restaurant-dashboard-drawer {
+    border-color: rgba(251, 146, 60, 0.2);
+    background:
+        linear-gradient(180deg, rgba(37, 20, 13, 0.98), rgba(19, 10, 7, 0.98));
+}
+
+.restaurant-dashboard-text {
+    font-size: 26px;
+    line-height: 1.5;
+}
+
+.restaurant-dashboard-muted {
+    color: #fcd9b6;
+}
+
+.restaurant-dashboard-kicker {
+    color: #fdba74;
+}
+
+.restaurant-dashboard-scroll {
+    scrollbar-color: rgba(251, 191, 36, 0.72) rgba(255, 255, 255, 0.06);
+    scrollbar-width: thin;
+}
+
+.restaurant-dashboard-scroll::-webkit-scrollbar {
+    width: 14px;
+    height: 14px;
+}
+
+.restaurant-dashboard-scroll::-webkit-scrollbar-track {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.08));
+    border-radius: 9999px;
+}
+
+.restaurant-dashboard-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #fdba74, #f97316);
+    border: 3px solid rgba(34, 16, 10, 0.95);
+    border-radius: 9999px;
+}
+
+.restaurant-dashboard-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #fcd34d, #ea580c);
+}
+
+.customer-scroll {
+    scrollbar-color: rgba(180, 83, 9, 0.72) rgba(255, 247, 237, 0.92);
+    scrollbar-width: thin;
+}
+
+.customer-scroll::-webkit-scrollbar {
+    width: 14px;
+    height: 14px;
+}
+
+.customer-scroll::-webkit-scrollbar-track {
+    background: linear-gradient(180deg, rgba(255, 251, 247, 0.96), rgba(255, 241, 230, 0.96));
+    border-radius: 9999px;
+}
+
+.customer-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #fdba74, #c2410c);
+    border: 3px solid rgba(255, 248, 241, 0.98);
+    border-radius: 9999px;
+    box-shadow: 0 6px 18px rgba(180, 83, 9, 0.2);
+}
+
+.customer-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #f59e0b, #9a3412);
+}
+
+.app-theme,
+.guest-auth-theme,
+.customer-theme {
+    font-size: 26px;
+    line-height: 1.5;
+}
+
+.app-theme .text-sm,
+.guest-auth-theme .text-sm,
+.customer-theme .text-sm {
+    font-size: 1.35rem;
+    line-height: 1.85rem;
+}
+
+.app-theme .text-base,
+.guest-auth-theme .text-base,
+.customer-theme .text-base {
+    font-size: 1.55rem;
+    line-height: 2rem;
+}
+
+.app-theme .text-lg,
+.guest-auth-theme .text-lg,
+.customer-theme .text-lg {
+    font-size: 1.75rem;
+    line-height: 2.15rem;
+}
+
+.app-theme .text-xl,
+.guest-auth-theme .text-xl,
+.customer-theme .text-xl {
+    font-size: 1.95rem;
+    line-height: 2.3rem;
+}
+
+.app-theme .text-2xl,
+.guest-auth-theme .text-2xl,
+.customer-theme .text-2xl {
+    font-size: 2.2rem;
+    line-height: 2.6rem;
+}
+
+.app-theme input,
+.app-theme select,
+.app-theme textarea,
+.app-theme button,
+.guest-auth-theme input,
+.guest-auth-theme select,
+.guest-auth-theme textarea,
+.guest-auth-theme button,
+.customer-theme input,
+.customer-theme select,
+.customer-theme textarea,
+.customer-theme button {
+    font-size: inherit;
+}
+
 .hotpepper-shell {
     --hp-orange: #e74f1d;
     --hp-orange-deep: #c93f14;
     --hp-cream: #fff7f2;
     --hp-cream-strong: #fff0e6;
+    --hp-brown: #5b2d16;
+    --hp-brown-deep: #3a1b0d;
+    --hp-gold: #f59e0b;
+    font-size: 26px;
+    line-height: 1.5;
 }
 
 .hotpepper-hero {
     background:
-        radial-gradient(circle at top left, rgba(255, 173, 92, 0.34), transparent 32%),
-        radial-gradient(circle at top right, rgba(231, 79, 29, 0.18), transparent 28%),
-        linear-gradient(180deg, #fff8f4 0%, #fff1e7 100%);
+        radial-gradient(circle at top left, rgba(245, 158, 11, 0.24), transparent 24%),
+        radial-gradient(circle at top right, rgba(231, 79, 29, 0.22), transparent 26%),
+        linear-gradient(180deg, #fff7ef 0%, #f9ead9 54%, #fdf5ec 100%);
+    border-bottom: 1px solid rgba(180, 83, 9, 0.1);
 }
 
 .hotpepper-kicker {
@@ -83,10 +242,11 @@
 .hotpepper-menu-card,
 .hotpepper-stat-card,
 .hotpepper-category-panel {
-    border: 1px solid rgba(251, 146, 60, 0.18);
+    border: 1px solid rgba(180, 83, 9, 0.14);
     border-radius: 1.75rem;
-    background: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 24px 60px -34px rgba(194, 65, 12, 0.35);
+    background:
+        linear-gradient(180deg, rgba(255, 252, 248, 0.98), rgba(255, 245, 235, 0.98));
+    box-shadow: 0 28px 70px -42px rgba(120, 53, 15, 0.34);
 }
 
 .hotpepper-summary-card {
@@ -110,8 +270,8 @@
 }
 
 .hotpepper-ticket-kicker {
-    color: #ea580c;
-    font-size: 0.72rem;
+    color: #b45309;
+    font-size: 0.86rem;
     font-weight: 900;
     letter-spacing: 0.22em;
     text-transform: uppercase;
@@ -126,18 +286,18 @@
 }
 
 .hotpepper-ticket-meta {
-    color: #64748b;
-    font-size: 0.82rem;
+    color: #7c5b46;
+    font-size: 0.95rem;
     font-weight: 700;
     padding-bottom: 0.18rem;
     text-transform: uppercase;
 }
 
 .hotpepper-ticket-status {
-    background: linear-gradient(135deg, #0f172a, #1e293b);
+    background: linear-gradient(135deg, #6b3418, #3f1d12);
     border-radius: 9999px;
     color: #fff;
-    font-size: 0.76rem;
+    font-size: 0.92rem;
     font-weight: 900;
     letter-spacing: 0.18em;
     padding: 0.7rem 1rem;
@@ -146,15 +306,15 @@
 
 .hotpepper-stat-label {
     color: #9a3412;
-    font-size: 0.72rem;
+    font-size: 0.88rem;
     font-weight: 800;
     letter-spacing: 0.16em;
     text-transform: uppercase;
 }
 
 .hotpepper-stat-value {
-    color: #0f172a;
-    font-size: 1.1rem;
+    color: #3a1b0d;
+    font-size: 1.32rem;
     font-weight: 900;
     margin-top: 0.45rem;
 }
@@ -162,9 +322,9 @@
 .hotpepper-tab {
     border: 1px solid #fed7aa;
     border-radius: 9999px;
-    background: white;
-    color: #9a3412;
-    font-size: 0.82rem;
+    background: rgba(255, 251, 247, 0.92);
+    color: #8a3512;
+    font-size: 1rem;
     font-weight: 700;
     padding: 0.75rem 1rem;
     white-space: nowrap;
@@ -178,22 +338,76 @@
 }
 
 .hotpepper-menu-card {
-    padding: 1rem;
+    padding: 1.35rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.hotpepper-menu-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at top right, rgba(251, 191, 36, 0.14), transparent 24%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.35), transparent 48%);
+    pointer-events: none;
 }
 
 .hotpepper-menu-thumb {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 5rem;
-    width: 5rem;
-    height: 5rem;
-    border-radius: 1.25rem;
-    background: linear-gradient(135deg, #fdba74, #fb7185);
+    flex: 0 0 6.25rem;
+    width: 6.25rem;
+    height: 6.25rem;
+    border-radius: 1.6rem;
+    background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.34), transparent 30%),
+        linear-gradient(135deg, #ffb36d, #fb7185);
+    box-shadow: 0 20px 34px -24px rgba(190, 24, 93, 0.45);
     color: white;
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: 900;
     overflow: hidden;
+}
+
+.hotpepper-menu-content {
+    position: relative;
+    z-index: 1;
+}
+
+.hotpepper-menu-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.hotpepper-menu-title-wrap {
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.hotpepper-menu-price {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 5.5rem;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, #fff1e7, #ffe4cf);
+    color: #c2410c;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    padding: 0.7rem 1rem;
+}
+
+.hotpepper-menu-footer {
+    margin-top: 1.25rem;
+    display: flex;
+    justify-content: flex-start;
 }
 
 .hotpepper-chip {
@@ -203,7 +417,7 @@
     border-radius: 9999px;
     color: #9a3412;
     display: inline-flex;
-    font-size: 0.72rem;
+    font-size: 0.86rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     padding: 0.35rem 0.65rem;
@@ -233,20 +447,23 @@
 .hotpepper-stepper {
     display: inline-flex;
     align-items: center;
-    gap: 0.75rem;
-    border: 1px solid #fed7aa;
+    gap: 1rem;
+    border: 1px solid rgba(251, 146, 60, 0.3);
     border-radius: 9999px;
-    background: #fff7f2;
-    padding: 0.4rem 0.8rem;
+    background: linear-gradient(180deg, #fff8f2, #fff1e6);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    padding: 0.55rem 1rem;
 }
 
 .hotpepper-stepper-btn {
-    width: 1.8rem;
-    height: 1.8rem;
+    width: 2.7rem;
+    height: 2.7rem;
     border-radius: 9999px;
-    background: white;
+    background: rgba(255, 255, 255, 0.96);
     color: #9a3412;
     font-weight: 900;
+    font-size: 1.55rem;
+    box-shadow: 0 10px 20px -16px rgba(154, 52, 18, 0.4);
 }
 
 .hotpepper-stepper-btn:disabled,
@@ -278,7 +495,7 @@
 .hotpepper-mobile-bar {
     align-items: center;
     backdrop-filter: blur(18px);
-    background: rgba(255, 255, 255, 0.94);
+    background: rgba(255, 248, 241, 0.95);
     border-top: 1px solid rgba(251, 146, 60, 0.22);
     bottom: 0;
     box-shadow: 0 -18px 40px -28px rgba(15, 23, 42, 0.45);
@@ -308,7 +525,7 @@
     border-radius: 9999px;
     color: white;
     display: inline-flex;
-    font-size: 0.82rem;
+    font-size: 0.95rem;
     font-weight: 900;
     gap: 0.65rem;
     letter-spacing: 0.08em;
@@ -358,7 +575,7 @@
     border: 1px solid #fed7aa;
     border-radius: 9999px;
     color: #9a3412;
-    font-size: 0.78rem;
+    font-size: 0.95rem;
     font-weight: 800;
     padding: 0.55rem 0.85rem;
     text-transform: uppercase;
@@ -371,6 +588,7 @@
     border-radius: 1rem;
     color: #0f172a;
     display: flex;
+    font-size: 1rem;
     font-weight: 700;
     justify-content: space-between;
     padding: 0.95rem 1rem;
@@ -381,7 +599,7 @@
     border: 1px solid #fdba74;
     border-radius: 9999px;
     color: #c2410c;
-    font-size: 0.78rem;
+    font-size: 0.95rem;
     font-weight: 800;
     padding: 0.42rem 0.7rem;
 }
@@ -410,8 +628,8 @@
 
     .hotpepper-menu-thumb {
         border-radius: 1rem;
-        height: 4.8rem;
-        width: 4.8rem;
+        height: 5.2rem;
+        width: 5.2rem;
     }
 
     .hotpepper-tab {
