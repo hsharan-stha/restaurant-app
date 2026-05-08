@@ -492,6 +492,17 @@
     padding: 1.5rem;
 }
 
+.hotpepper-session-slider {
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    touch-action: pan-x;
+}
+
+.hotpepper-session-card {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+}
+
 .hotpepper-mobile-bar {
     align-items: center;
     backdrop-filter: blur(18px);
@@ -531,6 +542,18 @@
     letter-spacing: 0.08em;
     padding: 0.9rem 1.1rem;
     text-transform: uppercase;
+}
+
+.guest-menu-pro .hotpepper-ticket-title {
+    font-size: clamp(1.25rem, 1.05rem + 1vw, 2rem);
+}
+
+.guest-menu-pro .hotpepper-ticket-status {
+    font-size: clamp(0.72rem, 0.66rem + 0.3vw, 0.92rem);
+}
+
+.guest-menu-pro .hotpepper-menu-card {
+    border-radius: 1.4rem;
 }
 
 .hotpepper-mobile-overlay {
@@ -646,6 +669,39 @@
         width: 2rem;
     }
 
+    .guest-menu-pro .hotpepper-mobile-bar {
+        gap: 0.6rem;
+        padding: 0.75rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .guest-menu-pro .hotpepper-mobile-side-btn {
+        min-width: 7.8rem;
+        padding: 0.58rem 0.7rem;
+    }
+
+    .guest-menu-pro .hotpepper-mobile-bar-btn {
+        min-width: 10.4rem;
+        justify-content: center;
+        padding: 0.72rem 0.92rem;
+    }
+
+    .guest-menu-pro .hotpepper-mobile-drawer {
+        width: min(22rem, 92vw);
+    }
+
+    .guest-menu-pro .hotpepper-menu-price {
+        min-width: 4.6rem;
+        padding: 0.55rem 0.75rem;
+    }
+
+    .guest-menu-pro .hotpepper-menu-footer {
+        margin-top: 0.9rem;
+    }
+
+    .guest-menu-pro .hotpepper-session-card {
+        min-width: 88vw !important;
+    }
+
     .hp-mobile-label {
         font-size: 0.62rem !important;
         line-height: 0.85rem !important;
@@ -659,5 +715,20 @@
     .hp-mobile-order-text {
         font-size: 0.82rem !important;
         line-height: 1rem !important;
+    }
+}
+
+@media (min-width: 640px) and (max-width: 1024px) {
+    .guest-menu-pro .hotpepper-shell {
+        font-size: 21px;
+    }
+
+    .guest-menu-pro .hotpepper-cart-card,
+    .guest-menu-pro .hotpepper-menu-card {
+        border-radius: 1.45rem;
+    }
+
+    .guest-menu-pro #order-summary {
+        top: 1.25rem;
     }
 }

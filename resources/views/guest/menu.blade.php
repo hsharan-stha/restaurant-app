@@ -7,14 +7,14 @@
 @endphp
 
 @section('content')
-    <div class="hotpepper-shell pb-28 lg:pb-10">
+    <div class="hotpepper-shell guest-menu-pro pb-28 lg:pb-10">
         <section class="hotpepper-hero">
             <div class="mx-auto max-w-6xl px-4 pb-6 pt-5 sm:px-6 lg:px-8">
                 <div class="space-y-4">
                     <div class="space-y-4">
                         <div>
                             <p class="text-base font-semibold uppercase tracking-[0.22em] text-orange-700">Welcome to your table</p>
-                            <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Table {{ $table->table_number }}</h1>
+                            <h1 class="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">Table {{ $table->table_number }}</h1>
                         </div>
                     </div>
                 </div>
@@ -56,29 +56,29 @@
                         </div>
                         <span class="hotpepper-ticket-status">{{ $activeOrder ? $activeOrder->status->value : 'completed' }}</span>
                     </div>
-                    <div class="customer-scroll mt-4 flex gap-3 overflow-x-auto pb-1">
-                        <div class="min-w-[220px] rounded-2xl bg-orange-50 px-4 py-4">
+                    <div class="hotpepper-session-slider customer-scroll mt-4 flex gap-3 overflow-x-auto pb-2">
+                        <div class="hotpepper-session-card min-w-[220px] rounded-2xl bg-orange-50 px-4 py-4">
                             <p class="text-sm font-bold uppercase tracking-[0.18em] text-orange-600">Session total</p>
                             <p class="mt-2 text-3xl font-black text-slate-950">&yen;{{ number_format((float) $sessionTotal, 0) }}</p>
                         </div>
                         @foreach($sessionOrders as $sessionOrder)
-                            <div class="min-w-[320px] rounded-2xl bg-[#fff7f2] px-4 py-4">
+                            <div class="hotpepper-session-card min-w-[320px] rounded-2xl bg-[#fff7f2] px-4 py-4">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="min-w-0">
-                                        <p class="text-[21px] font-semibold text-slate-900">Order #{{ $sessionOrder->id }}</p>
-                                        <p class="mt-1 text-base text-slate-500">{{ ucfirst($sessionOrder->status->value) }}</p>
+                                        <p class="text-lg font-semibold text-slate-900 sm:text-xl">Order #{{ $sessionOrder->id }}</p>
+                                        <p class="mt-1 text-sm text-slate-500 sm:text-base">{{ ucfirst($sessionOrder->status->value) }}</p>
                                     </div>
-                                    <p class="shrink-0 text-[21px] font-bold text-slate-950">&yen;{{ number_format((float) $sessionOrder->total_amount, 0) }}</p>
+                                    <p class="shrink-0 text-lg font-bold text-slate-950 sm:text-xl">&yen;{{ number_format((float) $sessionOrder->total_amount, 0) }}</p>
                                 </div>
                                 <div class="mt-4 space-y-2">
                                     @foreach($sessionOrder->items as $item)
                                         <div class="rounded-xl bg-white/80 px-3 py-3">
                                             <div class="flex items-start justify-between gap-3">
                                                 <div class="min-w-0">
-                                                    <p class="text-[21px] font-semibold text-slate-900">{{ $item->menuItem->name }}</p>
-                                                    <p class="mt-1 text-base text-slate-500">{{ $item->quantity }} x &yen;{{ number_format((float) $item->price, 0) }}</p>
+                                                    <p class="text-lg font-semibold text-slate-900 sm:text-xl">{{ $item->menuItem->name }}</p>
+                                                    <p class="mt-1 text-sm text-slate-500 sm:text-base">{{ $item->quantity }} x &yen;{{ number_format((float) $item->price, 0) }}</p>
                                                 </div>
-                                                <p class="shrink-0 text-[21px] font-bold text-slate-950">&yen;{{ number_format((float) $item->price * (int) $item->quantity, 0) }}</p>
+                                                <p class="shrink-0 text-lg font-bold text-slate-950 sm:text-xl">&yen;{{ number_format((float) $item->price * (int) $item->quantity, 0) }}</p>
                                             </div>
                                             @if(in_array($sessionOrder->status, [OrderStatus::Pending, OrderStatus::Preparing], true))
                                                 <div
@@ -101,7 +101,7 @@
             </section>
         @endif
 
-        <div class="mx-auto grid max-w-6xl gap-6 px-4 py-5 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)_370px] lg:px-8">
+        <div class="mx-auto grid max-w-6xl gap-6 px-4 py-5 sm:px-6 md:grid-cols-[minmax(0,1fr)_340px] lg:grid-cols-[220px_minmax(0,1fr)_370px] lg:px-8">
             <aside class="hidden lg:block lg:sticky lg:top-24 lg:self-start">
                 <div class="hotpepper-category-panel customer-scroll lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
                     <p class="text-sm font-bold uppercase tracking-[0.24em] text-orange-600">Browse</p>
@@ -123,7 +123,7 @@
                         <div class="flex items-end justify-between gap-4">
                             <div>
                                 <p class="text-sm font-bold uppercase tracking-[0.25em] text-orange-600">Category</p>
-                                <h2 class="mt-1 text-[21px] font-black text-slate-950 sm:text-2xl">{{ $category->name }}</h2>
+                                <h2 class="mt-1 text-xl font-black text-slate-950 sm:text-2xl">{{ $category->name }}</h2>
                             </div>
                             <p class="text-base text-slate-500">{{ $category->menuItems->count() }} items</p>
                         </div>
@@ -150,17 +150,17 @@
                                             <div class="hotpepper-menu-heading">
                                                 <div class="min-w-0">
                                                     <div class="hotpepper-menu-title-wrap">
-                                                        <h3 class="truncate text-[21px] font-black text-slate-950">{{ $item->name }}</h3>
+                                                        <h3 class="truncate text-xl font-black text-slate-950">{{ $item->name }}</h3>
                                                         <span class="hotpepper-chip">{{ $category->name }}</span>
                                                     </div>
                                                 </div>
-                                                <p class="hotpepper-menu-price text-[21px] font-black">&yen;{{ number_format((float) $item->price, 0) }}</p>
+                                                <p class="hotpepper-menu-price text-xl font-black">&yen;{{ number_format((float) $item->price, 0) }}</p>
                                             </div>
 
                                             <div class="hotpepper-menu-footer">
                                                 <div class="hotpepper-stepper" aria-label="Choose quantity">
                                                     <button type="button" class="hotpepper-stepper-btn" data-quantity-down>-</button>
-                                                    <span class="min-w-8 text-center text-[21px] font-bold text-slate-900" data-quantity-value>0</span>
+                                                    <span class="min-w-8 text-center text-xl font-bold text-slate-900" data-quantity-value>0</span>
                                                     <button type="button" class="hotpepper-stepper-btn" data-quantity-up>+</button>
                                                 </div>
                                             </div>
@@ -173,7 +173,7 @@
                 @endforeach
             </div>
 
-            <aside id="order-summary" class="hidden lg:sticky lg:top-24 lg:block lg:self-start">
+            <aside id="order-summary" class="hidden md:sticky md:top-24 md:block md:self-start">
                 <div class="hotpepper-cart-card lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col">
                     <div class="customer-scroll lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
                         <div class="flex items-start justify-between gap-4">
@@ -186,18 +186,18 @@
                         <form method="POST" action="{{ route('guest.orders.store') }}" id="guest-order-form" class="mt-6">
                             @csrf
                             <div id="guest-cart-lines" class="space-y-3">
-                                <p class="rounded-2xl border border-dashed border-orange-200 bg-orange-50/70 px-4 py-4 text-[21px] text-slate-500" id="guest-cart-empty">
+                                <p class="rounded-2xl border border-dashed border-orange-200 bg-orange-50/70 px-4 py-4 text-lg text-slate-500 sm:text-xl" id="guest-cart-empty">
                                     Choose items from the menu to start your order.
                                 </p>
                             </div>
                             <div id="guest-cart-hidden-inputs"></div>
 
                             <div class="mt-6 space-y-3 border-t border-orange-100 pt-4">
-                                <div class="flex items-center justify-between text-[21px]">
+                                <div class="flex items-center justify-between text-lg sm:text-xl">
                                     <span class="text-slate-500">Items selected</span>
                                     <span class="font-bold text-slate-950" id="guest-cart-count">0</span>
                                 </div>
-                                <div class="flex items-center justify-between text-[21px]">
+                                <div class="flex items-center justify-between text-lg sm:text-xl">
                                     <span class="font-semibold text-slate-700">New order subtotal</span>
                                     <span class="text-2xl font-black text-slate-950" id="guest-cart-total">&yen;0</span>
                                 </div>
@@ -214,7 +214,7 @@
 
                         @if($sessionOrders->isNotEmpty())
                             @if($hasOpenKitchenOrders)
-                                <div class="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-[21px] text-amber-800">
+                                <div class="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-lg text-amber-800 sm:text-xl">
                                     Checkout can be requested now, but some items are still pending or preparing.
                                 </div>
                             @endif
@@ -246,18 +246,18 @@
                     <form method="POST" action="{{ route('guest.orders.store') }}" id="guest-order-form-mobile">
                         @csrf
                         <div id="guest-cart-lines-mobile" class="space-y-3">
-                            <p class="rounded-2xl border border-dashed border-orange-200 bg-orange-50/70 px-4 py-4 text-[21px] text-slate-500" id="guest-cart-empty-mobile">
+                            <p class="rounded-2xl border border-dashed border-orange-200 bg-orange-50/70 px-4 py-4 text-lg text-slate-500 sm:text-xl" id="guest-cart-empty-mobile">
                                 Choose items from the menu to start your order.
                             </p>
                         </div>
                         <div id="guest-cart-hidden-inputs-mobile"></div>
 
                         <div class="mt-6 space-y-3 border-t border-orange-100 pt-4">
-                            <div class="flex items-center justify-between text-[21px]">
+                            <div class="flex items-center justify-between text-lg sm:text-xl">
                                 <span class="text-slate-500">Items selected</span>
                                 <span class="font-bold text-slate-950" id="guest-cart-count-mobile">0</span>
                             </div>
-                            <div class="flex items-center justify-between text-[21px]">
+                            <div class="flex items-center justify-between text-lg sm:text-xl">
                                 <span class="font-semibold text-slate-700">New order subtotal</span>
                                 <span class="text-2xl font-black text-slate-950" id="guest-cart-total-mobile">&yen;0</span>
                             </div>
@@ -274,7 +274,7 @@
 
                     @if($sessionOrders->isNotEmpty())
                         @if($hasOpenKitchenOrders)
-                            <div class="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-[21px] text-amber-800">
+                            <div class="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-lg text-amber-800 sm:text-xl">
                                 Checkout can be requested now, but some items are still pending or preparing.
                             </div>
                         @endif
