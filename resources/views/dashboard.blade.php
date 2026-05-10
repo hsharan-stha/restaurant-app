@@ -42,11 +42,65 @@
                 <button type="button" id="df-zoom-reset" class="rounded-lg border border-orange-800 bg-orange-950 px-2 py-2 text-xs text-orange-200 hover:bg-orange-900">100%</button>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2 border-t border-orange-950/30 pt-2 sm:border-0 sm:pt-0">
-                @if(auth()->user()->isAdmin())
-                    <a href="{{ route('dining-tables.index') }}" class="rounded-lg border border-orange-700/50 px-2.5 py-1.5 text-xs text-orange-200 hover:bg-orange-950 sm:text-sm">Edit floor plan</a>
-                @endif
-                <a href="{{ route('orders.create') }}" class="rounded-lg border border-orange-700/50 px-2.5 py-1.5 text-xs text-orange-200 hover:bg-orange-950 sm:text-sm">New order</a>
+            <div class="relative z-40 flex flex-wrap items-center gap-1.5 border-t border-orange-950/30 pt-2 sm:border-0 sm:pt-0">
+                <div class="relative" id="df-actions-menu-wrap">
+                    <button
+                        type="button"
+                        id="df-actions-menu-btn"
+                        class="flex h-9 w-9 items-center justify-center rounded-lg border border-orange-800/70 bg-orange-950/60 text-orange-100 transition hover:bg-orange-900/70 focus:outline-none focus:ring-2 focus:ring-orange-500/50 active:scale-95"
+                        aria-expanded="false"
+                        aria-haspopup="true"
+                        aria-controls="df-actions-menu-panel"
+                    >
+                        <span class="sr-only">Actions menu</span>
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <circle cx="12" cy="5" r="2" />
+                            <circle cx="12" cy="12" r="2" />
+                            <circle cx="12" cy="19" r="2" />
+                        </svg>
+                    </button>
+                    <div
+                        id="df-actions-menu-panel"
+                        role="menu"
+                        aria-labelledby="df-actions-menu-btn"
+                        class="absolute right-0 top-full z-50 mt-1 hidden min-w-[12.5rem] origin-top-right rounded-lg border border-orange-900/70 bg-[#1a120b] py-1 shadow-2xl shadow-black/50 ring-1 ring-orange-950/60"
+                    >
+                        <a
+                            href="{{ route('orders.create') }}"
+                            role="menuitem"
+                            class="block px-3 py-2 text-xs font-medium text-orange-100 hover:bg-orange-950/80"
+                        >New order</a>
+                        @if(auth()->user()->isAdmin())
+                            <div class="my-1 h-px bg-orange-900/70" role="separator"></div>
+                            <p class="px-3 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-orange-700">Admin</p>
+                            <a
+                                href="{{ route('dining-tables.index') }}"
+                                role="menuitem"
+                                class="block px-3 py-1.5 text-xs text-orange-200 hover:bg-orange-950/80"
+                            >Edit floor plan</a>
+                            <a
+                                href="{{ route('reporting.completed-orders') }}"
+                                role="menuitem"
+                                class="block px-3 py-1.5 text-xs text-orange-200 hover:bg-orange-950/80"
+                            >Reporting · completed orders</a>
+                            <a
+                                href="{{ route('reporting.monthly-item-sales-matrix') }}"
+                                role="menuitem"
+                                class="block px-3 py-1.5 text-xs text-orange-200 hover:bg-orange-950/80"
+                            >Reporting · item sales matrix</a>
+                            <a
+                                href="{{ route('menu-items.index') }}"
+                                role="menuitem"
+                                class="block px-3 py-1.5 text-xs text-orange-200 hover:bg-orange-950/80"
+                            >Menu items</a>
+                            <a
+                                href="{{ route('categories.index') }}"
+                                role="menuitem"
+                                class="block px-3 py-1.5 text-xs text-orange-200 hover:bg-orange-950/80"
+                            >Categories</a>
+                        @endif
+                    </div>
+                </div>
                 <form method="POST" action="{{ route('logout') }}" class="inline">
                     @csrf
                     <button type="submit" class="rounded-lg px-2 py-1.5 text-xs text-orange-600 hover:text-orange-300 sm:text-sm">Logout</button>

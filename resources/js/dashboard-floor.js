@@ -1010,9 +1010,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    function closeActionsMenu() {
+        const panel = document.getElementById('df-actions-menu-panel');
+        const btn = document.getElementById('df-actions-menu-btn');
+        panel?.classList.add('hidden');
+        btn?.setAttribute('aria-expanded', 'false');
+    }
+
+    (function initDashboardActionsMenu() {
+        const wrap = document.getElementById('df-actions-menu-wrap');
+        const btn = document.getElementById('df-actions-menu-btn');
+        const panel = document.getElementById('df-actions-menu-panel');
+        if (!wrap || !btn || !panel) {
+            return;
+        }
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const open = panel.classList.contains('hidden');
+            panel.classList.toggle('hidden', !open);
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        document.addEventListener('click', () => {
+            closeActionsMenu();
+        });
+        wrap.addEventListener('click', (e) => e.stopPropagation());
+        panel.querySelectorAll('a[role="menuitem"]').forEach((link) => {
+            link.addEventListener('click', () => closeActionsMenu());
+        });
+    })();
+
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeDrawer();
+            closeActionsMenu();
         }
     });
 

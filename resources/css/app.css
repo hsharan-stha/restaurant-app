@@ -986,3 +986,153 @@
         top: 1.25rem;
     }
 }
+
+/* ─── Admin reporting (compact ERP-style) ─── */
+.report-acc summary::-webkit-details-marker {
+    display: none;
+}
+
+/* ─── Monthly item sales matrix ─── */
+.sales-matrix-h-cat-a {
+    background: rgb(161 161 170 / 0.95);
+}
+
+.sales-matrix-h-cat-b {
+    background: rgb(212 212 216 / 0.95);
+}
+
+.sales-matrix-h-cat-c {
+    background: rgb(228 228 231 / 0.95);
+}
+
+.sales-matrix-h-i-a {
+    background: rgb(244 244 245 / 0.98);
+}
+
+.sales-matrix-h-i-b {
+    background: rgb(250 250 250 / 0.98);
+}
+
+.sales-matrix-h-i-c {
+    background: rgb(245 245 246 / 0.98);
+}
+
+.sales-matrix-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.sales-matrix-inner {
+    -webkit-overflow-scrolling: touch;
+}
+
+.sales-matrix-row-head.sales-matrix-sticky-col {
+    box-shadow:
+        inset -1px 0 0 rgb(63 63 70),
+        inset 1px 0 0 rgb(82 82 91);
+}
+
+.sales-matrix-corner {
+    position: sticky;
+    left: 0;
+    box-shadow:
+        inset -1px 0 0 rgb(63 63 70),
+        inset 0 -1px 0 rgb(63 63 70);
+}
+
+.sales-matrix-table thead .sales-matrix-corner {
+    box-shadow:
+        inset -1px 0 0 rgb(63 63 70),
+        inset 0 -1px 0 rgb(63 63 70);
+}
+
+.sales-matrix-table thead tr:first-child th {
+    position: sticky;
+    top: 0;
+    z-index: 13;
+}
+
+.sales-matrix-table thead tr:nth-child(2) th.sales-matrix-col-head {
+    position: sticky;
+    top: 1.65rem;
+    z-index: 12;
+    box-shadow: inset 0 -1px 0 rgb(113 113 122);
+}
+
+.sales-matrix-table thead .sales-matrix-corner {
+    top: 0;
+    left: 0;
+    z-index: 26;
+}
+
+.sales-matrix-corner-tr {
+    position: sticky;
+    top: 0;
+    right: 0;
+    z-index: 14;
+}
+
+.sales-matrix-sticky-last {
+    position: sticky;
+    right: 0;
+    box-shadow:
+        inset 1px 0 0 rgb(63 63 70),
+        -2px 0 10px rgb(0 0 0 / 20%);
+}
+
+.sales-matrix-corner,
+.sales-matrix-row-head.sales-matrix-sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 18;
+}
+
+.sales-matrix-table tbody td.sales-matrix-sticky-last {
+    z-index: 17;
+}
+
+.sales-matrix-table tbody tr.sales-matrix-body-row {
+    transition: background-color 0.08s ease;
+}
+
+.sales-matrix-table tbody tr.sales-matrix-body-row:hover td {
+    background-color: rgb(59 73 107 / 0.45);
+}
+
+.sales-matrix-row-even .sales-matrix-sticky-col {
+    background-color: rgb(15 23 42 / 0.97);
+}
+
+.sales-matrix-row-odd .sales-matrix-sticky-col {
+    background-color: rgb(25 37 61 / 0.97);
+}
+
+.sales-matrix-table tbody tr.sales-matrix-row-even {
+    background: rgb(15 23 42 / 0.25);
+}
+
+.sales-matrix-table tbody tr.sales-matrix-row-odd {
+    background: rgb(15 23 42 / 0.42);
+}
+
+.sales-matrix-table tfoot .sales-matrix-total-row {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    box-shadow: 0 -1px 0 rgb(113 113 122);
+}
+
+.sales-matrix-table tfoot .sales-matrix-total-row td {
+    box-shadow: inset 0 1px 0 rgb(63 63 70);
+}
+
+.sales-matrix-total-row .sales-matrix-sticky-col {
+    background: rgb(63 63 70) !important;
+    z-index: 22 !important;
+}
+
+.sales-matrix-total-row .sales-matrix-sticky-last {
+    background: rgb(251 191 36) !important;
+    color: rgb(24 24 27) !important;
+    z-index: 21 !important;
+}

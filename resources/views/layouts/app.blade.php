@@ -22,13 +22,13 @@
         </a>
     @endauth
 
-    <main class="mx-auto max-w-7xl px-4 py-8">
+    <main class="app-admin-main mx-auto max-w-[1600px] px-3 py-5 text-[13px] leading-snug sm:px-4 lg:py-6">
         @if(session('status'))
-            <div class="mb-6 rounded-lg border border-emerald-600/40 bg-emerald-950/40 px-4 py-3 text-emerald-200">{{ session('status') }}</div>
+            <div class="mb-3 rounded border border-emerald-700/50 bg-emerald-950/50 px-2.5 py-1.5 text-xs text-emerald-200">{{ session('status') }}</div>
         @endif
         @if ($errors->any())
-            <div class="mb-6 rounded-lg border border-red-600/40 bg-red-950/40 px-4 py-3 text-red-200">
-                <ul class="list-disc pl-5">
+            <div class="mb-3 rounded border border-red-800/50 bg-red-950/45 px-2.5 py-2 text-xs text-red-100">
+                <ul class="list-disc pl-4">
                     @foreach($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach

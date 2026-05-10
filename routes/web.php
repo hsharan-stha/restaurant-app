@@ -41,10 +41,6 @@ Route::middleware('auth')->group(function () {
     Route::get('orders/menu/catalog', [DashboardController::class, 'staffMenuCatalog'])->name('orders.menu.catalog');
 
     Route::middleware('role:admin,staff')->group(function () {
-        Route::get('reporting/completed-orders', [ReportingController::class, 'completedOrders'])->name('reporting.completed-orders');
-    });
-
-    Route::middleware('role:admin,staff')->group(function () {
         Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
         Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
@@ -61,6 +57,11 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:admin')->group(function () {
+        Route::get('reporting/completed-orders', [ReportingController::class, 'completedOrders'])->name('reporting.completed-orders');
+        Route::get('reporting/monthly-item-sales-matrix', [ReportingController::class, 'monthlyItemSalesMatrix'])->name('reporting.monthly-item-sales-matrix');
+        Route::get('reporting/monthly-item-sales-matrix/export/csv', [ReportingController::class, 'monthlyItemSalesMatrixCsv'])->name('reporting.monthly-item-sales-matrix.csv');
+        Route::get('reporting/monthly-item-sales-matrix/export/pdf', [ReportingController::class, 'monthlyItemSalesMatrixPdf'])->name('reporting.monthly-item-sales-matrix.pdf');
+
         Route::get('dining-tables/floor/data', [DiningTableFloorPlanController::class, 'data'])->name('dining-tables.floor.data');
         Route::post('dining-tables/floor/sync', [DiningTableFloorPlanController::class, 'sync'])->name('dining-tables.floor.sync');
         Route::post('dining-tables/floor/tables', [DiningTableFloorPlanController::class, 'store'])->name('dining-tables.floor.tables.store');

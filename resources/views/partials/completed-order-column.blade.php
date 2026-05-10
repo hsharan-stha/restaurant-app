@@ -6,9 +6,11 @@
     <div class="border-b-2 border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 to-emerald-900/20 px-4 py-3">
         <div class="flex items-center justify-between gap-3">
             <h2 class="text-2xl font-semibold uppercase tracking-wide {{ $titleClass }}">{{ $title }}</h2>
-            <a href="{{ route('reporting.completed-orders') }}" class="rounded-lg border border-emerald-400/50 bg-emerald-900/30 px-3 py-1.5 text-sm text-emerald-300 hover:border-emerald-300 hover:bg-emerald-900/50">
-                View Reports
-            </a>
+            @if(auth()->check() && auth()->user()->isAdmin())
+                <a href="{{ route('reporting.completed-orders') }}" class="rounded-lg border border-emerald-400/50 bg-emerald-900/30 px-3 py-1.5 text-sm text-emerald-300 hover:border-emerald-300 hover:bg-emerald-900/50">
+                    View Reports
+                </a>
+            @endif
         </div>
     </div>
     <div class="restaurant-dashboard-scroll min-h-0 flex-1 space-y-8 overflow-y-auto p-3">

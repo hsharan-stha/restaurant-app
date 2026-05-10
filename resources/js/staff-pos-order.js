@@ -37,12 +37,12 @@ function categoryEmoji(name) {
 
 function vegBadge(veg) {
     if (veg === true) {
-        return '<span class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-green-500 bg-green-500/20 text-[10px] font-bold text-green-400" title="Vegetarian">V</span>';
+        return '<span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-green-600/60 bg-green-500/15 text-[9px] font-bold text-green-400" title="Vegetarian">V</span>';
     }
     if (veg === false) {
-        return '<span class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-red-500 bg-red-500/20 text-[10px] font-bold text-red-400" title="Non-veg">N</span>';
+        return '<span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-red-600/60 bg-red-500/15 text-[9px] font-bold text-red-400" title="Non-veg">N</span>';
     }
-    return '<span class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-600 text-[10px] text-slate-500" title="—">—</span>';
+    return '<span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-slate-700 text-[9px] text-slate-500" title="—">—</span>';
 }
 
 function tableStatusClasses(status) {
@@ -131,7 +131,7 @@ function init() {
             toast.textContent = 'Could not load menu data. Refresh the page.';
             toast.classList.remove('hidden');
             toast.className =
-                'mb-3 rounded-lg border border-red-500/40 bg-red-950/60 px-3 py-2 text-sm text-red-200';
+                'mb-1.5 rounded border border-red-500/40 bg-red-950/60 px-2 py-1 text-[11px] text-red-200';
         }
         return;
     }
@@ -189,12 +189,12 @@ function init() {
         elToast.textContent = message;
         elToast.classList.remove('hidden');
         elToast.className =
-            'mb-3 rounded-lg px-3 py-2 text-sm ' +
+            'mb-1.5 rounded border px-2 py-1 text-[11px] ' +
             (kind === 'error'
-                ? 'border border-red-500/40 bg-red-950/60 text-red-200'
+                ? 'border-red-500/40 bg-red-950/60 text-red-200'
                 : kind === 'success'
-                  ? 'border border-emerald-500/40 bg-emerald-950/60 text-emerald-200'
-                  : 'border border-slate-600 bg-slate-900 text-slate-200');
+                  ? 'border-emerald-500/40 bg-emerald-950/60 text-emerald-200'
+                  : 'border-slate-700 bg-slate-900 text-slate-300');
         window.clearTimeout(showToast._t);
         showToast._t = window.setTimeout(() => elToast.classList.add('hidden'), 4200);
     }
@@ -228,27 +228,27 @@ function init() {
     function renderDrawerBody() {
         if (!elDrawerBody || !drawerItem) return;
         const img = drawerItem.image_url
-            ? `<img src="${escapeHtml(drawerItem.image_url)}" alt="" class="mb-4 aspect-video w-full rounded-xl object-cover" loading="lazy" />`
-            : `<div class="mb-4 flex aspect-video w-full items-center justify-center rounded-xl bg-slate-800 text-4xl text-slate-600">🍽️</div>`;
+            ? `<img src="${escapeHtml(drawerItem.image_url)}" alt="" class="mb-2 aspect-video max-h-[8rem] w-full rounded-md object-cover" loading="lazy" />`
+            : `<div class="mb-2 flex aspect-video max-h-[8rem] w-full items-center justify-center rounded-md bg-slate-900 text-2xl text-slate-600">🍽️</div>`;
         elDrawerBody.innerHTML = `
             ${img}
-            <p class="mb-4 font-mono text-2xl font-bold text-emerald-400">${escapeHtml(formatMoney(drawerItem.priceNum))}</p>
-            <label class="mb-2 block text-sm font-medium text-slate-300">Quantity</label>
-            <div class="mb-4 flex items-center gap-3">
-                <button type="button" data-drawer-qty="-1" class="min-h-[48px] min-w-[48px] rounded-xl bg-slate-800 text-xl font-bold text-white hover:bg-slate-700">−</button>
-                <span id="staff-pos-drawer-qty-display" class="min-w-[2rem] text-center text-xl font-semibold">${drawerQty}</span>
-                <button type="button" data-drawer-qty="1" class="min-h-[48px] min-w-[48px] rounded-xl bg-slate-800 text-xl font-bold text-white hover:bg-slate-700">+</button>
+            <p class="mb-2 font-mono text-base font-semibold text-emerald-400">${escapeHtml(formatMoney(drawerItem.priceNum))}</p>
+            <label class="mb-1 block text-[11px] font-medium text-slate-400">Qty</label>
+            <div class="mb-3 flex items-center gap-2">
+                <button type="button" data-drawer-qty="-1" class="h-8 w-8 rounded-md border border-slate-700 bg-slate-900 text-lg font-semibold leading-none text-white hover:bg-slate-800">−</button>
+                <span id="staff-pos-drawer-qty-display" class="min-w-[1.75rem] text-center font-mono text-sm font-semibold">${drawerQty}</span>
+                <button type="button" data-drawer-qty="1" class="h-8 w-8 rounded-md border border-slate-700 bg-slate-900 text-lg font-semibold leading-none text-white hover:bg-slate-800">+</button>
             </div>
-            <label class="mb-2 block text-sm font-medium text-slate-300">Spice level</label>
-            <select id="staff-pos-drawer-spice" class="mb-4 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-3 text-white">
+            <label class="mb-1 block text-[11px] font-medium text-slate-400">Spice</label>
+            <select id="staff-pos-drawer-spice" class="mb-2 h-8 w-full rounded-md border border-slate-700 bg-slate-900 px-2 text-xs text-white">
                 <option value="">Default</option>
                 <option value="mild">Mild</option>
                 <option value="medium">Medium</option>
                 <option value="hot">Hot</option>
                 <option value="extra_hot">Extra hot</option>
             </select>
-            <label class="mb-2 block text-sm font-medium text-slate-300">Notes</label>
-            <textarea id="staff-pos-drawer-notes" rows="3" class="w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-white placeholder:text-slate-500" placeholder="Allergies, modifications…">${escapeHtml(drawerNotes)}</textarea>
+            <label class="mb-1 block text-[11px] font-medium text-slate-400">Notes</label>
+            <textarea id="staff-pos-drawer-notes" rows="2" class="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-white placeholder:text-slate-600" placeholder="Mods…">${escapeHtml(drawerNotes)}</textarea>
         `;
         const spiceSel = document.getElementById('staff-pos-drawer-spice');
         if (spiceSel) spiceSel.value = drawerSpice;
@@ -309,8 +309,8 @@ function init() {
             const chip = document.createElement('button');
             chip.type = 'button';
             chip.dataset.tableId = String(t.id);
-            chip.className = `min-h-[44px] rounded-xl border px-3 py-2 text-left text-sm font-medium ring-1 transition hover:brightness-110 ${tableStatusClasses(t.status)}`;
-            chip.innerHTML = `<span class="block font-semibold">${escapeHtml(t.label)}</span><span class="text-xs opacity-80">${escapeHtml(t.status)}${t.has_active_session ? ' · active session' : ''}</span>`;
+            chip.className = `min-h-[2.25rem] rounded-md border px-2 py-1 text-left text-[11px] font-medium leading-tight ring-1 transition hover:brightness-110 ${tableStatusClasses(t.status)}`;
+            chip.innerHTML = `<span class="block truncate font-semibold">${escapeHtml(t.label)}</span><span class="text-[10px] opacity-85">${escapeHtml(t.status)}${t.has_active_session ? ' · ses' : ''}</span>`;
             chip.addEventListener('click', () => {
                 elTableSelect.value = String(t.id);
                 elTableSelect.dispatchEvent(new Event('change'));
@@ -349,9 +349,9 @@ function init() {
             btn.dataset.catId = String(c.id);
             const active = String(c.id) === String(activeCategoryId);
             btn.className = active
-                ? 'flex min-h-[48px] shrink-0 items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-left text-sm font-bold text-white shadow-lg shadow-emerald-900/30 lg:w-full'
-                : 'flex min-h-[48px] shrink-0 items-center gap-2 rounded-xl bg-slate-800 px-4 py-3 text-left text-sm font-semibold text-slate-200 ring-1 ring-white/10 hover:bg-slate-700 lg:w-full';
-            btn.innerHTML = `<span class="text-xl">${categoryEmoji(c.name)}</span><span class="truncate">${escapeHtml(c.name)}</span>`;
+                ? 'flex min-h-[2rem] shrink-0 items-center gap-1.5 rounded-md border border-emerald-500/60 bg-emerald-700/70 px-2 py-1.5 text-left text-[11px] font-semibold text-white lg:w-full'
+                : 'flex min-h-[2rem] shrink-0 items-center gap-1.5 rounded-md border border-slate-800 bg-slate-900 px-2 py-1.5 text-left text-[11px] font-medium text-slate-300 hover:bg-slate-800 lg:w-full';
+            btn.innerHTML = `<span class="text-sm leading-none opacity-95">${categoryEmoji(c.name)}</span><span class="truncate">${escapeHtml(c.name)}</span>`;
             btn.addEventListener('click', () => {
                 activeCategoryId = c.id;
                 renderCategories();
@@ -395,38 +395,38 @@ function init() {
         elItems.innerHTML = '';
         if (!flatItems.length) {
             elItems.innerHTML =
-                '<div class="col-span-full rounded-xl border border-amber-500/30 bg-amber-950/30 p-6 text-center text-sm text-amber-100"><p class="font-semibold">No menu items yet</p><p class="mt-2 text-amber-200/80">Add categories and menu items in the admin, then refresh this page.</p></div>';
+                '<div class="col-span-full rounded-md border border-amber-600/35 bg-amber-950/25 p-4 text-center text-[11px] text-amber-100/95"><p class="font-semibold">No menu items</p><p class="mt-1 text-amber-200/75">Configure menu in admin.</p></div>';
             return;
         }
         if (!list.length) {
             elItems.innerHTML =
-                '<div class="col-span-full rounded-xl border border-slate-600 bg-slate-900/80 p-6 text-center text-sm text-slate-400"><p>No items match this filter.</p><p class="mt-2 text-xs">Try another category, clear search, or switch to <strong>All items</strong>.</p></div>';
+                '<div class="col-span-full rounded-md border border-slate-800 bg-slate-900/70 p-4 text-center text-[11px] text-slate-400"><p>No matches</p><p class="mt-1 text-[10px] text-slate-500">Change category or clear search.</p></div>';
             return;
         }
         for (const it of list) {
             const card = document.createElement('article');
             card.className =
-                'group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 shadow-md transition hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-900/20 active:scale-[0.98]';
+                'group flex flex-col overflow-hidden rounded-md border border-slate-800/90 bg-slate-900/60 transition hover:border-slate-600 hover:bg-slate-900/85 active:scale-[0.99]';
             const imgUrl = it.image_url;
             const imgBlock = imgUrl
-                ? `<img src="${escapeHtml(imgUrl)}" alt="" class="h-28 w-full object-cover transition group-hover:scale-105" loading="lazy" />`
-                : `<div class="flex h-28 w-full items-center justify-center bg-slate-800 text-4xl text-slate-600">🍽️</div>`;
+                ? `<img src="${escapeHtml(imgUrl)}" alt="" class="h-[4.25rem] w-full object-cover" loading="lazy" />`
+                : `<div class="flex h-[4.25rem] w-full items-center justify-center bg-slate-900 text-xl text-slate-600">🍽️</div>`;
             card.innerHTML = `
                 <button type="button" class="staff-pos-quick-add block w-full text-left" data-item-id="${it.id}" aria-label="Add to cart">
                     ${imgBlock}
-                    <div class="flex flex-1 flex-col gap-1 p-3">
-                        <div class="flex items-start justify-between gap-2">
-                            <h3 class="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-snug text-white">${escapeHtml(it.name)}</h3>
+                    <div class="flex flex-1 flex-col gap-0.5 p-2">
+                        <div class="flex items-start justify-between gap-1">
+                            <h3 class="line-clamp-2 min-h-[2rem] text-[11px] font-semibold leading-snug text-slate-100">${escapeHtml(it.name)}</h3>
                             ${vegBadge(it.veg)}
                         </div>
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="font-mono text-base font-bold text-emerald-400">${escapeHtml(formatMoney(it.priceNum))}</span>
-                            <span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-300">In stock</span>
+                        <div class="flex items-center justify-between gap-1 pt-0.5">
+                            <span class="font-mono text-xs font-semibold text-emerald-400/95">${escapeHtml(formatMoney(it.priceNum))}</span>
+                            <span class="rounded border border-emerald-800/50 bg-emerald-950/40 px-1 py-px text-[9px] font-medium uppercase tracking-wide text-emerald-400/90">Sell</span>
                         </div>
                     </div>
                 </button>
-                <div class="flex gap-2 border-t border-white/10 px-3 pb-3">
-                    <button type="button" class="staff-pos-custom flex-1 rounded-lg bg-slate-800 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700" data-item-id="${it.id}">Customize</button>
+                <div class="border-t border-slate-800/80 px-2 pb-2 pt-px">
+                    <button type="button" class="staff-pos-custom h-7 w-full rounded border border-slate-700 bg-slate-950 text-[10px] font-medium text-slate-300 hover:bg-slate-900" data-item-id="${it.id}">More</button>
                 </div>
             `;
             elItems.appendChild(card);
@@ -466,34 +466,34 @@ function init() {
         elSubtotal.textContent = formatMoney(sub);
         if (!cart.length) {
             elCartLines.innerHTML =
-                '<p class="py-8 text-center text-sm text-slate-500">Cart is empty.<br/>Tap a dish to add.</p>';
+                '<p class="py-6 text-center text-[11px] text-slate-500">Empty · tap item</p>';
             return;
         }
         elCartLines.innerHTML = '';
         for (const line of cart) {
             const wrap = document.createElement('div');
             wrap.className =
-                'rounded-xl border border-white/10 bg-slate-900/90 p-3 shadow-inner transition';
+                'rounded-md border border-slate-800/90 bg-slate-950/80 p-1.5';
             const opts = line.options && Object.keys(line.options).length ? JSON.stringify(line.options) : '';
             const notesHtml =
                 line.notes || opts
-                    ? `<p class="mt-1 text-xs text-slate-400">${escapeHtml(line.notes || '')}${opts ? `<span class="block text-slate-500">${escapeHtml(opts)}</span>` : ''}</p>`
+                    ? `<p class="mt-0.5 text-[10px] leading-snug text-slate-500">${escapeHtml(line.notes || '')}${opts ? `<span class="block text-slate-600">${escapeHtml(opts)}</span>` : ''}</p>`
                     : '';
             wrap.innerHTML = `
-                <div class="flex items-start justify-between gap-2">
+                <div class="flex items-start justify-between gap-1.5">
                     <div class="min-w-0 flex-1">
-                        <div class="font-semibold text-white">${escapeHtml(line.name)}</div>
+                        <div class="truncate text-[11px] font-medium text-slate-100">${escapeHtml(line.name)}</div>
                         ${notesHtml}
                     </div>
-                    <div class="text-right font-mono text-sm text-emerald-300">${escapeHtml(formatMoney(line.price * line.quantity))}</div>
+                    <div class="shrink-0 text-right font-mono text-[11px] font-medium text-emerald-400/95">${escapeHtml(formatMoney(line.price * line.quantity))}</div>
                 </div>
-                <div class="mt-3 flex flex-wrap items-center gap-2">
-                    <div class="flex items-center gap-2 rounded-xl bg-slate-800 p-1 ring-1 ring-white/10">
-                        <button type="button" data-line-dec="${line.lineId}" class="min-h-[44px] min-w-[44px] rounded-lg bg-slate-700 text-lg font-bold text-white hover:bg-slate-600">−</button>
-                        <span class="min-w-[2rem] text-center text-lg font-semibold">${line.quantity}</span>
-                        <button type="button" data-line-inc="${line.lineId}" class="min-h-[44px] min-w-[44px] rounded-lg bg-slate-700 text-lg font-bold text-white hover:bg-slate-600">+</button>
+                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <div class="inline-flex items-center gap-px rounded-md border border-slate-700 bg-slate-900 p-px">
+                        <button type="button" data-line-dec="${line.lineId}" class="h-7 min-w-[1.75rem] rounded px-2 text-base font-semibold leading-none text-white hover:bg-slate-800">−</button>
+                        <span class="min-w-[1.5rem] text-center font-mono text-[11px] font-semibold tabular-nums">${line.quantity}</span>
+                        <button type="button" data-line-inc="${line.lineId}" class="h-7 min-w-[1.75rem] rounded px-2 text-base font-semibold leading-none text-white hover:bg-slate-800">+</button>
                     </div>
-                    <button type="button" data-line-remove="${line.lineId}" class="rounded-xl border border-red-500/40 bg-red-950/50 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-900/60">Remove</button>
+                    <button type="button" data-line-remove="${line.lineId}" class="rounded border border-red-900/50 bg-red-950/40 px-2 py-1 text-[10px] font-medium text-red-300 hover:bg-red-950/70">×</button>
                 </div>
             `;
             elCartLines.appendChild(wrap);
@@ -657,8 +657,8 @@ function init() {
             document.querySelectorAll('.pos-filter-btn').forEach((b) => {
                 const on = b.getAttribute('data-pos-filter') === filterMode;
                 b.className = on
-                    ? 'pos-filter-btn rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow'
-                    : 'pos-filter-btn rounded-full bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-200 ring-1 ring-white/10 hover:bg-slate-700';
+                    ? 'pos-filter-btn rounded border border-emerald-600 bg-emerald-900/60 px-2 py-0.5 text-[11px] font-medium text-emerald-100'
+                    : 'pos-filter-btn rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-[11px] font-medium text-slate-300 hover:bg-slate-800';
             });
             renderItems();
         });

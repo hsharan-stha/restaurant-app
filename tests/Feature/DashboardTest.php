@@ -34,8 +34,30 @@ class DashboardTest extends TestCase
             ->assertSee('dashboard-floor-root')
             ->assertSee('df-konva-container')
             ->assertSee('Restaurant dashboard')
+            ->assertSee('df-actions-menu-btn')
             ->assertSee('New order')
+            ->assertSee('Edit floor plan')
             ->assertSee('Logout');
+    }
+
+    public function test_staff_dashboard_actions_menu_excludes_admin_only_links(): void
+    {
+        $user = User::factory()->create();
+        $staffRole = Role::query()->create(['name' => 'staff']);
+        $user->roles()->attach($staffRole);
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response
+            ->assertOk()
+            ->assertSee('df-actions-menu-btn')
+            ->assertSee('New order')
+            ->assertDontSee('Edit floor plan')
+            ->assertDontSee('Item sales matrix');
+
+        $html = $response->getContent();
+        $this->assertStringNotContainsString(route('reporting.completed-orders'), $html);
+        $this->assertStringNotContainsString(route('menu-items.index'), $html);
     }
 
     public function test_dashboard_poll_announces_new_items_for_preparing_orders(): void
