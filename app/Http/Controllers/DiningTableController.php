@@ -8,24 +8,17 @@ use App\Http\Requests\StoreDiningTableRequest;
 use App\Http\Requests\UpdateDiningTableRequest;
 use App\Models\CustomerSession;
 use App\Models\DiningTable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class DiningTableController extends Controller
 {
-    public function index(): View
+    public function floorPlan(): View
     {
-        $tables = DiningTable::query()
-            ->orderBy('table_number')
-            ->with(['customerSessions' => function ($query) {
-                $query->with(['orders' => function ($query) {
-                    $query->with('payments');
-                }]);
-            }])
-            ->get();
-
-        return view('admin.dining-tables.index', compact('tables'));
+        return view('admin.dining-tables.floor-plan');
     }
 
     public function create(): View
@@ -52,9 +45,13 @@ class DiningTableController extends Controller
         return redirect()->route('dining-tables.index')->with('status', 'Table updated.');
     }
 
-    public function destroy(DiningTable $diningTable): RedirectResponse
+    public function destroy(Request $request, DiningTable $diningTable): RedirectResponse|JsonResponse
     {
         $diningTable->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Table deleted.']);
+        }
 
         return redirect()->route('dining-tables.index')->with('status', 'Table deleted.');
     }

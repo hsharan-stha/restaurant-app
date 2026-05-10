@@ -7,6 +7,12 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/js/app.js',
+                'resources/js/floor-plan.js',
+                'resources/js/restaurant-global-notify.js',
+                'resources/js/customer-table-realtime.js',
+                'resources/js/dashboard-floor.js',
+                'resources/js/staff-pos-order.js',
+                'resources/js/guest-menu.js',
             ],
             refresh: true,
         }),

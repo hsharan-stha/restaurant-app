@@ -22,8 +22,4 @@
         </label>
         <button type="submit" class="w-full rounded-lg bg-emerald-600 py-2 font-medium text-white hover:bg-emerald-500">Sign in</button>
     </form>
-    <p class="mt-6 text-center text-sm text-slate-500">
-        No account?
-        <a href="{{ route('register') }}" class="text-emerald-400 hover:underline">Register</a>
-    </p>
 @endsection

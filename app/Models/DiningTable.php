@@ -15,10 +15,36 @@ class DiningTable extends Model
     protected $table = 'dining_tables';
 
     protected $fillable = [
+        'floor_id',
         'table_number',
+        'table_name',
+        'shape',
+        'x_position',
+        'y_position',
+        'width',
+        'height',
+        'scale_x',
+        'scale_y',
+        'rotation',
+        'fill_color',
+        'seat_capacity',
         'status',
         'qr_token',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'status' => TableStatus::class,
+            'x_position' => 'decimal:2',
+            'y_position' => 'decimal:2',
+            'width' => 'decimal:2',
+            'height' => 'decimal:2',
+            'scale_x' => 'decimal:4',
+            'scale_y' => 'decimal:4',
+            'rotation' => 'decimal:4',
+        ];
+    }
 
     protected static function booted(): void
     {
@@ -26,14 +52,15 @@ class DiningTable extends Model
             if (! $table->qr_token) {
                 $table->qr_token = (string) Str::uuid();
             }
-        });
-    }
 
-    protected function casts(): array
-    {
-        return [
-            'status' => TableStatus::class,
-        ];
+            if ($table->table_number === null) {
+                $table->table_number = (int) (static::query()->max('table_number') ?? 0) + 1;
+            }
+
+            if ($table->table_name === null || $table->table_name === '') {
+                $table->table_name = 'Table '.$table->table_number;
+            }
+        });
     }
 
     protected function customerEntryUrl(): Attribute

@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') — {{ config('app.name', 'Restaurant OS') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @auth
+        @include('components.restaurant-notify-meta')
+    @endauth
+    @vite(['resources/css/app.css', 'resources/js/restaurant-global-notify.js', 'resources/js/app.js'])
+    @stack('head')
 </head>
 <body class="app-theme min-h-screen bg-slate-950 text-slate-100 antialiased">
     @auth

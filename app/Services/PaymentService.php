@@ -2,10 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
-use App\Enums\OrderStatus;
-use App\Enums\TableStatus;
 use App\Models\Order;
 use App\Models\Payment;
 use Illuminate\Database\Eloquent\Collection;
@@ -13,6 +12,10 @@ use Illuminate\Support\Facades\DB;
 
 class PaymentService
 {
+    public function __construct(
+        protected OrderService $orderService
+    ) {}
+
     public function processLocalPayment(Order $order, PaymentMethod $method): Payment
     {
         return DB::transaction(function () use ($order, $method) {
@@ -41,9 +44,9 @@ class PaymentService
                     'method' => $method,
                     'status' => PaymentStatus::Completed,
                 ]);
-            }
 
-            $this->releaseTableIfNeeded($order, $orders);
+                $this->orderService->transitionPaidOrderToCheckoutDone($checkoutOrder->fresh(['invoice', 'items.menuItem']));
+            }
 
             return $payment;
         });
@@ -73,33 +76,5 @@ class PaymentService
             ->get()
             ->filter(fn (Order $checkoutOrder) => ! $this->hasCompletedPayment($checkoutOrder))
             ->values();
-    }
-
-    protected function releaseTableIfNeeded(Order $order, Collection $paidOrders): void
-    {
-        $hasRemainingOpenOrders = Order::query()
-            ->where('table_id', $order->table_id)
-            ->where(function ($query) use ($order, $paidOrders) {
-                $query->whereIn('status', [OrderStatus::Pending->value, OrderStatus::Preparing->value])
-                    ->orWhere(function ($completedQuery) use ($order, $paidOrders) {
-                        $completedQuery->where('status', OrderStatus::Completed->value);
-
-                        if ($order->customer_session_id) {
-                            $completedQuery->where('customer_session_id', $order->customer_session_id);
-                        }
-
-                        $completedQuery->whereNotIn('id', $paidOrders->pluck('id'));
-                    });
-            })
-            ->exists();
-
-        if (! $hasRemainingOpenOrders) {
-            $order->table()->update(['status' => TableStatus::Available]);
-            
-            // Delete the customer session for this order
-            if ($order->customer_session_id) {
-                $order->customerSession()->delete();
-            }
-        }
     }
 }

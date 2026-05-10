@@ -17,7 +17,10 @@ class CheckoutRequested implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        return [new Channel('orders')];
+        return [
+            new Channel('dashboard'),
+            new Channel('table.'.$this->order->table_id),
+        ];
     }
 
     public function broadcastAs(): string
@@ -31,18 +34,23 @@ class CheckoutRequested implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         $this->order->loadMissing(['table']);
-        $tableNumber = $this->order->table->table_number;
+        $table = $this->order->table;
+        $tableNumber = $table->table_number;
+        $tableLabel = filled($table->table_name)
+            ? (string) $table->table_name
+            : 'Table number '.$tableNumber;
 
         return [
             'order' => [
                 'id' => $this->order->id,
                 'table' => [
-                    'id' => $this->order->table->id,
+                    'id' => $table->id,
                     'table_number' => $tableNumber,
+                    'table_name' => $table->table_name,
                 ],
                 'checkout_requested_at' => $this->order->checkout_requested_at?->toIso8601String(),
             ],
-            'announcement_text' => "Table number {$tableNumber} has requested checkout",
+            'announcement_text' => "{$tableLabel} has requested checkout",
         ];
     }
 }

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\OrderStatus;
+use App\Enums\SessionStatus;
 use App\Models\Category;
 use App\Models\CustomerSession;
 use App\Models\DiningTable;
@@ -14,6 +15,15 @@ use Tests\TestCase;
 class CustomerOrderingTest extends TestCase
 {
     use RefreshDatabase;
+
+    /** After QR scan: welcome → guest count → menu. */
+    protected function scanQrAndStartSession(DiningTable $table, int $guestCount = 2): void
+    {
+        $this->get(route('guest.entry', $table))
+            ->assertRedirect(route('guest.welcome'));
+        $this->post(route('guest.session.start'), ['guest_count' => $guestCount])
+            ->assertRedirect(route('guest.menu'));
+    }
 
     public function test_guest_can_start_a_table_session_and_place_an_order(): void
     {
@@ -29,9 +39,7 @@ class CustomerOrderingTest extends TestCase
             'category_id' => $category->id,
         ]);
 
-        $this->get(route('guest.entry', $table))
-            ->assertRedirect(route('guest.menu'))
-            ->assertSessionHas('customer_session_token');
+        $this->scanQrAndStartSession($table);
 
         $this->get(route('guest.menu'))
             ->assertOk()
@@ -53,6 +61,7 @@ class CustomerOrderingTest extends TestCase
         $this->assertDatabaseCount('customer_sessions', 1);
         $this->assertDatabaseCount('orders', 1);
         $this->assertDatabaseCount('order_items', 1);
+        $this->assertEquals(2, (int) CustomerSession::query()->first()->party_size);
     }
 
     public function test_guest_additional_orders_append_to_the_active_ticket(): void
@@ -74,7 +83,7 @@ class CustomerOrderingTest extends TestCase
             'category_id' => $category->id,
         ]);
 
-        $this->get(route('guest.entry', $table));
+        $this->scanQrAndStartSession($table);
 
         $this->post(route('guest.orders.store'), [
             'items' => [
@@ -110,8 +119,10 @@ class CustomerOrderingTest extends TestCase
         $customerSession = CustomerSession::query()->create([
             'table_id' => $table->id,
             'session_token' => 'session-11',
+            'party_size' => 2,
             'started_at' => now(),
             'last_seen_at' => now(),
+            'status' => SessionStatus::Active,
         ]);
 
         $category = Category::query()->create(['name' => 'Kitchen']);
@@ -168,7 +179,7 @@ class CustomerOrderingTest extends TestCase
             'category_id' => $category->id,
         ]);
 
-        $this->get(route('guest.entry', $table));
+        $this->scanQrAndStartSession($table);
 
         $this->post(route('guest.orders.store'), [
             'items' => [
@@ -195,8 +206,10 @@ class CustomerOrderingTest extends TestCase
         $customerSession = CustomerSession::query()->create([
             'table_id' => $table->id,
             'session_token' => 'session-6',
+            'party_size' => 3,
             'started_at' => now(),
             'last_seen_at' => now(),
+            'status' => SessionStatus::Active,
         ]);
 
         $order = Order::query()->create([
@@ -223,8 +236,10 @@ class CustomerOrderingTest extends TestCase
         $customerSession = CustomerSession::query()->create([
             'table_id' => $table->id,
             'session_token' => 'session-10',
+            'party_size' => 4,
             'started_at' => now(),
             'last_seen_at' => now(),
+            'status' => SessionStatus::Active,
         ]);
 
         $category = Category::query()->create(['name' => 'Dinner']);
@@ -258,10 +273,10 @@ class CustomerOrderingTest extends TestCase
         $this->withSession(['customer_session_token' => $customerSession->session_token])
             ->get(route('guest.menu'))
             ->assertOk()
-            ->assertSee('2 orders placed')
-            ->assertSee('Order #'.$firstOrder->id)
-            ->assertSee('Order #'.$secondOrder->id)
-            ->assertSee('Checkout can be requested now, but some items are still pending or preparing.');
+            ->assertSee('2 orders')
+            ->assertSee('#'.$firstOrder->id)
+            ->assertSee('#'.$secondOrder->id)
+            ->assertSee('Checkout available');
     }
 
     public function test_guest_cannot_start_different_session_on_already_occupied_table(): void
@@ -274,13 +289,35 @@ class CustomerOrderingTest extends TestCase
         CustomerSession::query()->create([
             'table_id' => $table->id,
             'session_token' => 'existing-session',
+            'party_size' => 2,
             'started_at' => now(),
             'last_seen_at' => now(),
+            'status' => SessionStatus::Active,
         ]);
 
         $this->get(route('guest.entry', $table))
             ->assertOk()
             ->assertSee('Table 1 is occupied')
             ->assertSee('Table 1 is already occupied in different session.');
+    }
+
+    public function test_guest_menu_without_session_shows_scan_page_not_login(): void
+    {
+        $this->get(route('guest.menu'))
+            ->assertRedirect(route('guest.need-qr'));
+    }
+
+    public function test_guest_menu_redirects_to_welcome_until_party_size_set(): void
+    {
+        $table = DiningTable::query()->create([
+            'table_number' => 88,
+            'status' => 'available',
+        ]);
+
+        $this->get(route('guest.entry', $table))
+            ->assertRedirect(route('guest.welcome'));
+
+        $this->get(route('guest.menu'))
+            ->assertRedirect(route('guest.welcome'));
     }
 }

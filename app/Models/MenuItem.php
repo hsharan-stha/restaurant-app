@@ -11,7 +11,11 @@ class MenuItem extends Model
 {
     protected $fillable = [
         'name',
+        'description',
         'price',
+        'prep_minutes',
+        'is_bestseller',
+        'is_available',
         'image',
         'category_id',
     ];
@@ -20,6 +24,8 @@ class MenuItem extends Model
     {
         return [
             'price' => 'decimal:2',
+            'is_bestseller' => 'boolean',
+            'is_available' => 'boolean',
         ];
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SessionStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,6 +17,8 @@ class CustomerSession extends Model
         'started_at',
         'last_seen_at',
         'closed_at',
+        'status',
+        'total_bill',
     ];
 
     protected function casts(): array
@@ -24,6 +27,8 @@ class CustomerSession extends Model
             'started_at' => 'datetime',
             'last_seen_at' => 'datetime',
             'closed_at' => 'datetime',
+            'status' => SessionStatus::class,
+            'total_bill' => 'decimal:2',
         ];
     }
 

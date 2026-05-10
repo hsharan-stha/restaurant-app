@@ -3,96 +3,99 @@
 @section('title', 'Live orders')
 
 @section('content')
-    @php
-        use App\Enums\OrderStatus;
-        use App\Enums\PaymentStatus;
-    @endphp
-
     <div
-        id="live-orders-dashboard"
-        class="restaurant-dashboard-theme relative min-h-screen"
-        data-latest-checkout-request-at="{{ $latestCheckoutRequestAt ?? '' }}"
-        data-latest-order-item-id="{{ $latestOrderItemId ?? 0 }}"
+        id="dashboard-floor-root"
+        class="relative flex h-screen min-h-0 flex-col bg-[#0c0a09]"
+        data-url-floor-state="{{ route('dashboard.floor.state') }}"
+        data-url-panel-template="{{ url('/dashboard/floor/tables') }}/__ID__/panel"
+        data-url-order-status-template="{{ url('/orders') }}/__ORDER__/status"
+        data-url-orders-base="{{ url('/orders') }}"
+        data-url-menu-catalog="{{ route('orders.menu.catalog') }}"
     >
-        <div class="grid h-screen grid-rows-3 gap-0 lg:grid-cols-3 lg:grid-rows-1">
-            @include('partials.order-column', ['title' => 'Pending', 'titleClass' => 'text-amber-400', 'orders' => $pendingOrders, 'showCount' => true])
-            @include('partials.order-column', ['title' => 'Preparing', 'titleClass' => 'text-sky-400', 'orders' => $preparingOrders, 'showCount' => true])
-            @include('partials.completed-order-column', [
-                'title' => 'Completed',
-                'titleClass' => 'text-emerald-400',
-                'groups' => $completedOrderGroups,
-            ])
-        </div>
+        <header class="relative z-30 flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-orange-950/40 bg-[#120906]/95 px-3 py-2 shadow-lg backdrop-blur sm:gap-3 sm:px-4">
+            <div class="flex min-w-0 flex-1 items-center gap-3">
+                <span class="truncate text-sm font-semibold text-orange-50 sm:text-base">Restaurant dashboard</span>
+                <span id="df-live-count" class="rounded-full bg-orange-600/30 px-2.5 py-0.5 text-xs font-semibold text-orange-100">0 live</span>
+                <span
+                    id="df-ws-status"
+                    class="rounded-full border border-orange-900/60 bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-400"
+                    title="Realtime connection"
+                >Poll</span>
+            </div>
 
-        <button
-            type="button"
-            id="dashboard-action-toggle"
-            aria-controls="dashboard-action-panel"
-            aria-expanded="false"
-            class="fixed bottom-5 right-5 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-orange-500 text-3xl font-light text-white shadow-2xl shadow-orange-950/50 transition hover:scale-105 hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-300"
-        >
-            <span aria-hidden="true">+</span>
-        </button>
-
-        <div id="dashboard-action-backdrop" class="pointer-events-none fixed inset-0 z-40 bg-[#120906]/0 opacity-0 transition duration-200"></div>
-
-        <aside
-            id="dashboard-action-panel"
-            class="restaurant-dashboard-drawer pointer-events-none fixed right-0 top-0 z-50 flex h-screen w-full max-w-sm translate-x-full flex-col opacity-0 shadow-2xl transition duration-300 sm:w-[24rem]"
-            aria-hidden="true"
-        >
-            <div class="flex items-center justify-between border-b border-orange-200/15 px-5 py-4">
-                <div>
-                    <p class="restaurant-dashboard-kicker text-xs font-semibold uppercase tracking-[0.35em]">Admin Info</p>
-                    <h2 class="mt-2 text-2xl font-semibold text-white">{{ auth()->user()->name }}</h2>
-                    <p class="restaurant-dashboard-muted mt-1 text-sm">{{ auth()->user()->email }}</p>
-                </div>
-                <button
-                    type="button"
-                    id="dashboard-action-close"
-                    class="rounded-full border border-orange-200/20 px-3 py-1 text-sm text-orange-100 hover:border-orange-200 hover:text-white"
+            <div class="flex flex-1 flex-wrap items-center gap-2 sm:max-w-md sm:flex-initial">
+                <label class="sr-only" for="df-search">Search tables</label>
+                <input
+                    id="df-search"
+                    type="search"
+                    placeholder="Search table…"
+                    class="min-w-[8rem] flex-1 rounded-xl border border-orange-900/50 bg-black/30 px-3 py-2 text-sm text-orange-50 placeholder:text-orange-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-400 sm:w-56"
+                    autocomplete="off"
                 >
-                    Close
-                </button>
             </div>
 
-            <div class="restaurant-dashboard-scroll flex-1 space-y-6 overflow-y-auto px-5 py-5">
-                <div class="restaurant-dashboard-inset rounded-3xl border p-4">
-                    <p class="restaurant-dashboard-kicker text-xs font-semibold uppercase tracking-[0.25em]">Role</p>
-                    <p class="mt-2 text-lg font-semibold text-white">{{ auth()->user()->isAdmin() ? 'Admin' : 'Staff' }}</p>
-                    <p class="restaurant-dashboard-muted mt-1 text-sm">Quick actions for managing orders and restaurant data.</p>
-                </div>
-
-                <div class="space-y-3">
-                    <a href="{{ route('orders.create') }}" class="block rounded-2xl bg-orange-600 px-4 py-4 text-base font-semibold text-white hover:bg-orange-500">
-                        New order
-                    </a>
-
-                    <a href="{{ route('reporting.completed-orders') }}" class="block rounded-2xl border border-emerald-200/20 bg-emerald-600/20 px-4 py-4 text-base font-semibold text-emerald-200 hover:border-emerald-300 hover:bg-emerald-600/30">
-                        Reports
-                    </a>
-
-                    @if(auth()->user()->isAdmin())
-                        <a href="{{ route('categories.index') }}" class="block rounded-2xl border border-orange-200/20 bg-white/5 px-4 py-4 text-base font-semibold text-white hover:border-orange-300 hover:bg-white/10">
-                            Category
-                        </a>
-                        <a href="{{ route('menu-items.index') }}" class="block rounded-2xl border border-orange-200/20 bg-white/5 px-4 py-4 text-base font-semibold text-white hover:border-orange-300 hover:bg-white/10">
-                            Item
-                        </a>
-                        <a href="{{ route('dining-tables.index') }}" class="block rounded-2xl border border-orange-200/20 bg-white/5 px-4 py-4 text-base font-semibold text-white hover:border-orange-300 hover:bg-white/10">
-                            Table
-                        </a>
-                    @endif
-
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="block w-full rounded-2xl bg-rose-600 px-4 py-4 text-left text-base font-semibold text-white hover:bg-rose-500">
-                            Logout
-                        </button>
-                    </form>
-                </div>
+            <div class="flex flex-wrap items-center gap-1.5">
+                <button type="button" id="df-kitchen" class="rounded-xl border border-orange-800/60 bg-orange-950/50 px-3 py-2 text-xs font-semibold text-orange-100 hover:bg-orange-900/60 sm:text-sm">Kitchen mode</button>
+                <button type="button" id="df-fullscreen" class="rounded-xl border border-orange-800/60 bg-orange-950/50 px-3 py-2 text-xs font-semibold text-orange-100 hover:bg-orange-900/60 sm:text-sm">Fullscreen</button>
+                <button type="button" id="df-zoom-in" class="rounded-lg border border-orange-800 bg-orange-950 px-2.5 py-2 text-sm text-orange-100 hover:bg-orange-900">＋</button>
+                <button type="button" id="df-zoom-out" class="rounded-lg border border-orange-800 bg-orange-950 px-2.5 py-2 text-sm text-orange-100 hover:bg-orange-900">−</button>
+                <button type="button" id="df-zoom-reset" class="rounded-lg border border-orange-800 bg-orange-950 px-2 py-2 text-xs text-orange-200 hover:bg-orange-900">100%</button>
             </div>
-        </aside>
+
+            <div class="flex flex-wrap items-center gap-2 border-t border-orange-950/30 pt-2 sm:border-0 sm:pt-0">
+                @if(auth()->user()->isAdmin())
+                    <a href="{{ route('dining-tables.index') }}" class="rounded-lg border border-orange-700/50 px-2.5 py-1.5 text-xs text-orange-200 hover:bg-orange-950 sm:text-sm">Edit floor plan</a>
+                @endif
+                <a href="{{ route('orders.create') }}" class="rounded-lg border border-orange-700/50 px-2.5 py-1.5 text-xs text-orange-200 hover:bg-orange-950 sm:text-sm">New order</a>
+                <form method="POST" action="{{ route('logout') }}" class="inline">
+                    @csrf
+                    <button type="submit" class="rounded-lg px-2 py-1.5 text-xs text-orange-600 hover:text-orange-300 sm:text-sm">Logout</button>
+                </form>
+            </div>
+        </header>
+
+        <div class="relative min-h-0 flex-1">
+            <div id="df-konva-container" class="absolute inset-0 touch-manipulation bg-[#0c0a09]"></div>
+
+            <div id="df-drawer-backdrop" class="fixed inset-0 z-40 bg-black/50 opacity-0 transition-opacity duration-300 pointer-events-none lg:hidden"></div>
+
+            <aside
+                id="df-drawer"
+                class="fixed bottom-0 right-0 top-[var(--df-toolbar-h,120px)] z-50 flex w-full max-w-[420px] translate-x-full flex-col border-l border-orange-900/60 bg-[#120906] shadow-2xl transition-transform duration-300 ease-out"
+                aria-hidden="true"
+            >
+                <div class="flex items-start justify-between gap-3 border-b border-orange-950/50 px-4 py-4">
+                    <div>
+                        <p class="text-[10px] font-semibold uppercase tracking-[0.25em] text-orange-900">Table</p>
+                        <h2 id="df-drawer-title" class="mt-1 text-lg font-semibold text-orange-50">—</h2>
+                        <p id="df-drawer-meta" class="mt-1 text-xs text-orange-700"></p>
+                    </div>
+                    <button type="button" id="df-drawer-close" class="rounded-lg border border-orange-800 px-3 py-1.5 text-sm text-orange-200 hover:bg-orange-950">✕</button>
+                </div>
+
+                <div id="df-drawer-empty" class="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-center text-sm text-orange-900">
+                    <p>Select a table on the floor plan</p>
+                </div>
+
+                <div id="df-drawer-body" class="hidden flex-1 flex-col overflow-hidden">
+                    <div class="flex-1 overflow-y-auto px-4 py-4">
+                        <section class="mb-6">
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-orange-900">Active orders</p>
+                            <div id="df-active-orders" class="mt-2 space-y-3 text-sm text-orange-100"></div>
+                        </section>
+
+                        <section class="mb-6">
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-orange-900">Kitchen actions</p>
+                            <div id="df-status-actions" class="mt-2 flex flex-wrap gap-2"></div>
+                        </section>
+
+                        <section>
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-orange-900">Order history (sessions)</p>
+                            <div id="df-session-history" class="mt-2 space-y-3"></div>
+                        </section>
+                    </div>
+                </div>
+            </aside>
+        </div>
     </div>
-
 @endsection

@@ -10,7 +10,6 @@ use App\Models\Invoice;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Payment;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -32,12 +31,10 @@ class DashboardTest extends TestCase
         $this->actingAs($user)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('dashboard-action-toggle')
-            ->assertSee('Admin Info')
+            ->assertSee('dashboard-floor-root')
+            ->assertSee('df-konva-container')
+            ->assertSee('Restaurant dashboard')
             ->assertSee('New order')
-            ->assertSee('Category')
-            ->assertSee('Item')
-            ->assertSee('Table')
             ->assertSee('Logout');
     }
 
@@ -139,14 +136,20 @@ class DashboardTest extends TestCase
             ]);
         }
 
-        $response = $this->actingAs($user)->get(route('dashboard'));
+        $response = $this->actingAs($user)->getJson(route('dashboard.floor.table.panel', $table));
 
         $response
             ->assertOk()
-            ->assertSee('Session group')
-            ->assertSee('2 orders')
-            ->assertSee('Order #'.$firstOrder->id)
-            ->assertSee('Order #'.$secondOrder->id)
-            ->assertSee('¥32.40');
+            ->assertJsonPath('sessions.0.customer_session_id', $session->id);
+
+        $payload = $response->json();
+        $this->assertCount(1, $payload['sessions']);
+        $sessionOrders = $payload['sessions'][0]['orders'];
+        $this->assertCount(2, $sessionOrders);
+        $ids = collect($sessionOrders)->pluck('id')->all();
+        $this->assertContains($firstOrder->id, $ids);
+        $this->assertContains($secondOrder->id, $ids);
+        $response->assertJsonFragment(['total_amount' => '10.00']);
+        $response->assertJsonFragment(['total_amount' => '20.00']);
     }
 }

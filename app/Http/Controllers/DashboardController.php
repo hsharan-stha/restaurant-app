@@ -3,101 +3,161 @@
 namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
+use App\Enums\SessionStatus;
+use App\Models\Category;
+use App\Models\CustomerSession;
+use App\Models\DiningTable;
+use App\Models\Order;
 use App\Models\OrderItem;
 use App\Repositories\Contracts\OrderRepositoryInterface;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
+use App\Services\OrderService;
+use App\Support\DashboardFloorVisual;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
     public function __construct(
-        protected OrderRepositoryInterface $orderRepository
+        protected OrderRepositoryInterface $orderRepository,
+        protected OrderService $orderService,
     ) {}
 
     public function __invoke(Request $request): View
     {
-        $orders = $this->orderRepository->allWithRelations();
-        
-        // Show only last 2 days in dashboard (no filter)
-        $completedFilterEnd = now();
-        $completedFilterStart = now()->subDays(2);
+        return view('dashboard');
+    }
 
-        $completedOrders = $orders
-            ->filter(fn ($o) => $o->status === OrderStatus::Completed)
-            ->filter(function ($order) use ($completedFilterStart, $completedFilterEnd) {
-                $completedAt = $order->updated_at ?? $order->created_at;
+    public function floorState(): JsonResponse
+    {
+        $tables = DiningTable::query()->orderBy('table_number')->get();
 
-                if (! $completedAt) {
-                    return false;
-                }
+        $sessionsByTable = CustomerSession::query()
+            ->where('status', SessionStatus::Active->value)
+            ->whereIn('table_id', $tables->pluck('id'))
+            ->get()
+            ->keyBy('table_id');
 
-                return $completedAt->between(
-                    $completedFilterStart->copy()->startOfDay(),
-                    $completedFilterEnd->copy()->endOfDay()
-                );
-            })
-            ->values();
-        $latestCheckoutRequestAt = $orders
-            ->filter(fn ($o) => $o->checkout_requested_at)
-            ->max(fn ($o) => $o->checkout_requested_at?->toIso8601String());
-        $latestOrderItemId = (int) (OrderItem::query()->max('id') ?? 0);
+        $orders = Order::query()
+            ->with(['items.menuItem', 'invoice', 'payments'])
+            ->whereIn('table_id', $tables->pluck('id'))
+            ->orderByDesc('id')
+            ->get()
+            ->groupBy('table_id');
 
-        return view('dashboard', [
-            'pendingOrders' => $orders->filter(fn ($o) => $o->status === OrderStatus::Pending)->values(),
-            'preparingOrders' => $orders->filter(fn ($o) => $o->status === OrderStatus::Preparing)->values(),
-            'completedOrderGroups' => $this->buildCompletedOrderGroups($completedOrders),
-            'latestCheckoutRequestAt' => $latestCheckoutRequestAt,
-            'latestOrderItemId' => $latestOrderItemId,
+        $payload = $tables->map(function (DiningTable $table) use ($orders, $sessionsByTable) {
+            /** @var Collection<int, Order> $forTable */
+            $forTable = $orders->get($table->id, collect());
+            $visual = DashboardFloorVisual::forTable($table, $forTable);
+            $activeForCounts = $forTable->filter(fn ($o) => $o->status !== OrderStatus::CheckoutDone);
+
+            return [
+                'id' => $table->id,
+                'floor_id' => $table->floor_id,
+                'table_number' => $table->table_number,
+                'table_name' => $table->table_name,
+                'shape' => $table->shape,
+                'x_position' => $table->x_position,
+                'y_position' => $table->y_position,
+                'width' => $table->width,
+                'height' => $table->height,
+                'scale_x' => $table->scale_x,
+                'scale_y' => $table->scale_y,
+                'rotation' => $table->rotation,
+                'fill_color' => $table->fill_color,
+                'seat_capacity' => $table->seat_capacity,
+                'status' => $table->status->value,
+                'visual' => $visual,
+                'counts' => [
+                    'pending' => $activeForCounts->where('status', OrderStatus::Pending)->count(),
+                    'preparing' => $activeForCounts->where('status', OrderStatus::Preparing)->count(),
+                    'completed' => $activeForCounts->where('status', OrderStatus::Completed)->count(),
+                ],
+                'pending_order_ids' => $activeForCounts->where('status', OrderStatus::Pending)->pluck('id')->values()->all(),
+                'guest_party_size' => $sessionsByTable->get($table->id)?->party_size,
+            ];
+        });
+
+        return response()->json([
+            'tables' => $payload->values(),
+            'live_order_count' => Order::query()->whereIn('status', [
+                OrderStatus::Pending->value,
+                OrderStatus::Preparing->value,
+                OrderStatus::Completed->value,
+            ])->count(),
         ]);
     }
 
-    protected function parseCompletedDate(mixed $value, Carbon $default): Carbon
+    public function tablePanel(DiningTable $diningTable): JsonResponse
     {
-        if (! is_string($value) || trim($value) === '') {
-            return $default->copy();
-        }
+        $orders = Order::query()
+            ->where('table_id', $diningTable->id)
+            ->with(['items.menuItem', 'invoice', 'payments', 'customerSession'])
+            ->orderByDesc('id')
+            ->get();
 
-        try {
-            return Carbon::parse($value);
-        } catch (\Throwable) {
-            return $default->copy();
-        }
+        $sessions = $orders->groupBy(fn ($o) => $o->customer_session_id ?: 'single-'.$o->id);
+
+        return response()->json([
+            'table' => [
+                'id' => $diningTable->id,
+                'table_name' => $diningTable->table_name,
+                'table_number' => $diningTable->table_number,
+                'status' => $diningTable->status->value,
+                'seat_capacity' => $diningTable->seat_capacity,
+            ],
+            'visual' => DashboardFloorVisual::forTable($diningTable, $orders),
+            'active_orders' => $orders
+                ->filter(fn ($o) => in_array($o->status, [
+                    OrderStatus::Pending,
+                    OrderStatus::Preparing,
+                    OrderStatus::Completed,
+                ], true))
+                ->values()
+                ->map(fn (Order $o) => $this->serializeOrderForPanel($o)),
+            'sessions' => $sessions->map(fn (Collection $group) => [
+                'customer_session_id' => $group->first()?->customer_session_id,
+                'orders' => $group->map(fn (Order $o) => $this->serializeOrderForPanel($o))->values(),
+            ])->values(),
+            'menu_catalog' => $this->staffMenuCatalogPayload(),
+        ]);
     }
 
-    protected function buildCompletedOrderGroups(Collection $completedOrders): Collection
+    public function staffMenuCatalog(): JsonResponse
     {
-        return $completedOrders
-            ->groupBy(fn ($order) => $order->customer_session_id
-                ? 'session-'.$order->customer_session_id
-                : 'order-'.$order->id)
-            ->map(function (Collection $group) {
-                $firstOrder = $group->first();
-                $checkoutOrder = $group->first(
-                    fn ($order) => $order->invoice
-                        && ! $order->payments->contains(fn ($payment) => $payment->status->value === 'completed')
-                );
-                $latestCompletedAt = $group->max(fn ($order) => $order->updated_at ?? $order->created_at);
+        return response()->json($this->staffMenuCatalogPayload());
+    }
 
-                return [
-                    'id' => $firstOrder->customer_session_id ?: $firstOrder->id,
-                    'table_number' => $firstOrder->table?->table_number,
-                    'status' => OrderStatus::Completed,
-                    'customer_session_id' => $firstOrder->customer_session_id,
-                    'orders' => $group->values(),
-                    'order_count' => $group->count(),
-                    'display_total' => $group->sum(fn ($order) => (float) ($order->invoice->total ?? $order->total_amount)),
-                    'checkout_order' => $checkoutOrder,
-                    'latest_completed_at' => $latestCompletedAt,
-                ];
-            })
-            ->sortBy([
-                fn (array $group) => $group['checkout_order'] ? 0 : 1,
-                fn (array $group) => -($group['latest_completed_at']?->timestamp ?? 0),
-            ])
-            ->values();
+    /**
+     * @return array{categories: array<int, array<string, mixed>>}
+     */
+    protected function staffMenuCatalogPayload(): array
+    {
+        $categories = Category::query()
+            ->with(['menuItems' => fn ($q) => $q->orderBy('name')])
+            ->orderBy('name')
+            ->get();
+
+        return [
+            'categories' => $categories->map(fn (Category $c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'items' => $c->menuItems->map(fn ($m) => [
+                    'id' => $m->id,
+                    'name' => $m->name,
+                    'price' => (string) $m->price,
+                ])->values()->all(),
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function serializeOrderForPanel(Order $order): array
+    {
+        return $this->orderService->orderPanelPayload($order);
     }
 
     public function poll(Request $request): JsonResponse

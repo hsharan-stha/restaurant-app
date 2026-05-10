@@ -56,6 +56,10 @@ function playFallbackBeep() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (document.querySelector('meta[name="restaurant-notify"]')?.getAttribute('content') === '1') {
+        return;
+    }
+
     const root = document.getElementById('live-orders-dashboard');
     const voiceButton = document.getElementById('voice-alert-toggle');
     const actionToggle = document.getElementById('dashboard-action-toggle');

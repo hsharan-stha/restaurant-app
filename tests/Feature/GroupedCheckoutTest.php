@@ -31,7 +31,7 @@ class GroupedCheckoutTest extends TestCase
             ->assertSee('Session checkout')
             ->assertSee('Order #'.$firstOrder->id)
             ->assertSee('Order #'.$secondOrder->id)
-            ->assertSee('¥32.40');
+            ->assertSeeHtml('&yen;32.40');
     }
 
     public function test_grouped_checkout_marks_all_completed_session_orders_as_paid(): void

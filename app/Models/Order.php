@@ -13,9 +13,13 @@ class Order extends Model
     protected $fillable = [
         'table_id',
         'customer_session_id',
+        'order_number',
         'status',
         'total_amount',
         'checkout_requested_at',
+        'ordered_at',
+        'completed_at',
+        'checkout_at',
     ];
 
     protected function casts(): array
@@ -24,6 +28,9 @@ class Order extends Model
             'status' => OrderStatus::class,
             'total_amount' => 'decimal:2',
             'checkout_requested_at' => 'datetime',
+            'ordered_at' => 'datetime',
+            'completed_at' => 'datetime',
+            'checkout_at' => 'datetime',
         ];
     }
 

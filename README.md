@@ -9,7 +9,7 @@
 
 ## Restaurant Management System
 
-Laravel 11 application with role-based access (Admin / Staff), live order broadcasting (Pusher + Laravel Echo), PDF invoices (**barryvdh/laravel-dompdf**), Stripe Checkout for online payments, and a REST API (**Sanctum**). Blade dashboard includes notification tone + row highlight on **NewOrderCreated**.
+Laravel 11 application with role-based access (Admin / Staff), live order broadcasting via **Laravel Reverb** (self-hosted WebSockets + Laravel Echo), PDF invoices (**barryvdh/laravel-dompdf**), Stripe Checkout for online payments, and a REST API (**Sanctum**). The dashboard floor plan uses realtime events (`OrderPlaced`, `CheckoutCompleted`) with optional HTTP polling fallback.
 
 Installation and configuration: **[SETUP.md](SETUP.md)**.
 
