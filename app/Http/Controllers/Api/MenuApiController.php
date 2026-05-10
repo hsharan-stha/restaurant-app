@@ -11,7 +11,9 @@ class MenuApiController extends Controller
     public function index(): JsonResponse
     {
         $categories = Category::query()
-            ->with(['menuItems' => fn ($q) => $q->orderBy('name')])
+            ->where('is_active', true)
+            ->with(['menuItems' => fn ($q) => $q->where('is_available', true)->orderBy('name')])
+            ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
 

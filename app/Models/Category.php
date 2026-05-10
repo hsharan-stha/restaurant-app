@@ -7,7 +7,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Model
 {
-    protected $fillable = ['name'];
+    protected $fillable = [
+        'name',
+        'sort_order',
+        'is_active',
+        'icon',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+            'sort_order' => 'integer',
+        ];
+    }
 
     public function menuItems(): HasMany
     {

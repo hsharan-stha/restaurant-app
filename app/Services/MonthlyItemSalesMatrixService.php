@@ -29,6 +29,7 @@ class MonthlyItemSalesMatrixService
 
         $categories = Category::query()
             ->with(['menuItems' => fn ($q) => $q->orderBy('name')])
+            ->orderBy('sort_order')
             ->orderBy('name')
             ->get()
             ->map(fn ($cat) => [

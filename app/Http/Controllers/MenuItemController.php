@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreMenuItemRequest;
 use App\Http\Requests\UpdateMenuItemRequest;
-use App\Models\Category;
 use App\Models\MenuItem;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
@@ -14,16 +13,12 @@ class MenuItemController extends Controller
 {
     public function index(): View
     {
-        $menuItems = MenuItem::query()->with('category')->orderBy('name')->get();
-
-        return view('admin.menu-items.index', compact('menuItems'));
+        return view('admin.menu-items.manage');
     }
 
-    public function create(): View
+    public function create(): RedirectResponse
     {
-        $categories = Category::query()->orderBy('name')->get();
-
-        return view('admin.menu-items.create', compact('categories'));
+        return redirect()->route('menu-items.index', ['new' => '1']);
     }
 
     public function store(StoreMenuItemRequest $request): RedirectResponse
@@ -40,16 +35,23 @@ class MenuItemController extends Controller
         return redirect()->route('menu-items.index')->with('status', 'Menu item created.');
     }
 
-    public function edit(MenuItem $menuItem): View
+    public function edit(MenuItem $menuItem): RedirectResponse
     {
-        $categories = Category::query()->orderBy('name')->get();
-
-        return view('admin.menu-items.edit', compact('menuItem', 'categories'));
+        return redirect()->route('menu-items.index', ['edit' => $menuItem->id]);
     }
 
     public function update(UpdateMenuItemRequest $request, MenuItem $menuItem): RedirectResponse
     {
         $data = $request->validated();
+
+        if (! empty($data['remove_image'])) {
+            if ($menuItem->image) {
+                Storage::disk('public')->delete($menuItem->image);
+            }
+            $menuItem->image = null;
+        }
+        unset($data['remove_image']);
+
         if ($request->hasFile('image')) {
             if ($menuItem->image) {
                 Storage::disk('public')->delete($menuItem->image);

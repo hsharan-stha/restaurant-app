@@ -135,7 +135,9 @@ class DashboardController extends Controller
     protected function staffMenuCatalogPayload(): array
     {
         $categories = Category::query()
+            ->where('is_active', true)
             ->with(['menuItems' => fn ($q) => $q->orderBy('name')])
+            ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
 

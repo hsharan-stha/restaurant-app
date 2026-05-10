@@ -25,7 +25,9 @@ class OrderController extends Controller
     {
         $tables = DiningTable::query()->orderBy('table_number')->get();
         $categories = Category::query()
+            ->where('is_active', true)
             ->with(['menuItems' => fn ($q) => $q->orderBy('name')])
+            ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
 

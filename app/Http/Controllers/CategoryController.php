@@ -12,26 +12,32 @@ class CategoryController extends Controller
 {
     public function index(): View
     {
-        $categories = Category::query()->orderBy('name')->get();
-
-        return view('admin.categories.index', compact('categories'));
+        return view('admin.categories.manage');
     }
 
-    public function create(): View
+    public function create(): RedirectResponse
     {
-        return view('admin.categories.create');
+        return redirect()->route('categories.index', ['new' => '1']);
     }
 
     public function store(StoreCategoryRequest $request): RedirectResponse
     {
-        Category::query()->create($request->validated());
+        $data = $request->validated();
+        if (! array_key_exists('sort_order', $data)) {
+            $data['sort_order'] = 0;
+        }
+        if (! array_key_exists('is_active', $data)) {
+            $data['is_active'] = $request->boolean('is_active', true);
+        }
+
+        Category::query()->create($data);
 
         return redirect()->route('categories.index')->with('status', 'Category created.');
     }
 
-    public function edit(Category $category): View
+    public function edit(Category $category): RedirectResponse
     {
-        return view('admin.categories.edit', compact('category'));
+        return redirect()->route('categories.index', ['edit' => $category->id]);
     }
 
     public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
@@ -43,6 +49,11 @@ class CategoryController extends Controller
 
     public function destroy(Category $category): RedirectResponse
     {
+        if ($category->menuItems()->exists()) {
+            return redirect()->route('categories.index')
+                ->withErrors(['catalog' => 'Move or delete menu items in this category first.']);
+        }
+
         $category->delete();
 
         return redirect()->route('categories.index')->with('status', 'Category deleted.');

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\CatalogCategoryApiController;
+use App\Http\Controllers\Admin\CatalogMenuItemApiController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerOrderingController;
@@ -69,6 +71,22 @@ Route::middleware('auth')->group(function () {
         Route::patch('dining-tables/floor/tables/{diningTable}', [DiningTableFloorPlanController::class, 'update'])->name('dining-tables.floor.tables.update');
 
         Route::get('dining-tables', [DiningTableController::class, 'floorPlan'])->name('dining-tables.index');
+
+        Route::prefix('admin/catalog')->name('admin.catalog.')->group(function (): void {
+            Route::get('categories', [CatalogCategoryApiController::class, 'index'])->name('categories.index');
+            Route::post('categories', [CatalogCategoryApiController::class, 'store'])->name('categories.store');
+            Route::patch('categories/{category}', [CatalogCategoryApiController::class, 'update'])->name('categories.update');
+            Route::post('categories/{category}/toggle-active', [CatalogCategoryApiController::class, 'toggleActive'])->name('categories.toggle-active');
+            Route::delete('categories/{category}', [CatalogCategoryApiController::class, 'destroy'])->name('categories.destroy');
+
+            Route::get('menu-items', [CatalogMenuItemApiController::class, 'index'])->name('menu-items.index');
+            Route::post('menu-items', [CatalogMenuItemApiController::class, 'store'])->name('menu-items.store');
+            Route::patch('menu-items/{menuItem}', [CatalogMenuItemApiController::class, 'update'])->name('menu-items.update');
+            Route::patch('menu-items/{menuItem}/inline', [CatalogMenuItemApiController::class, 'inlineUpdate'])->name('menu-items.inline-update');
+            Route::post('menu-items/bulk', [CatalogMenuItemApiController::class, 'bulk'])->name('menu-items.bulk');
+            Route::post('menu-items/{menuItem}/duplicate', [CatalogMenuItemApiController::class, 'duplicate'])->name('menu-items.duplicate');
+            Route::delete('menu-items/{menuItem}', [CatalogMenuItemApiController::class, 'destroy'])->name('menu-items.destroy');
+        });
 
         Route::resource('categories', CategoryController::class)->except(['show']);
         Route::resource('menu-items', MenuItemController::class)->except(['show']);

@@ -137,7 +137,9 @@ class CustomerOrderingController extends Controller
         $customerSession->update(['last_seen_at' => now()]);
 
         $categories = Category::query()
+            ->where('is_active', true)
             ->with(['menuItems' => fn ($query) => $query->where('is_available', true)->orderBy('name')])
+            ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
 

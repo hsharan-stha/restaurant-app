@@ -13,6 +13,7 @@ export default defineConfig({
                 'resources/js/dashboard-floor.js',
                 'resources/js/staff-pos-order.js',
                 'resources/js/guest-menu.js',
+                'resources/js/catalog-admin.js',
             ],
             refresh: true,
         }),

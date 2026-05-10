@@ -13,9 +13,12 @@ class MenuItem extends Model
         'name',
         'description',
         'price',
+        'discount_price',
         'prep_minutes',
         'is_bestseller',
+        'is_popular',
         'is_available',
+        'dietary_type',
         'image',
         'category_id',
     ];
@@ -24,7 +27,9 @@ class MenuItem extends Model
     {
         return [
             'price' => 'decimal:2',
+            'discount_price' => 'decimal:2',
             'is_bestseller' => 'boolean',
+            'is_popular' => 'boolean',
             'is_available' => 'boolean',
         ];
     }
