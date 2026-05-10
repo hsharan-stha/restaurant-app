@@ -10,30 +10,22 @@ use Illuminate\Support\Facades\DB;
 
 class MonthlyItemSalesMatrixService
 {
-    public const MODE_QUANTITY = 'quantity';
-
-    public const MODE_AMOUNT = 'amount';
-
     /**
      * @return array{
      *     year: int,
      *     month: int,
      *     month_label: string,
-     *     mode: string,
      *     categories: Collection<int, array{id: int, name: string, items: Collection<int, array{id: int, name: string}>}>,
      *     item_ids: array<int, int>,
-     *     date_rows: Collection<int, array{date: string, date_label: string, cells: array<int, float|int>, row_total: float}>,
-     *     column_totals: array<int, float|int>,
-     *     grand_total: float|int,
-     *     value_label: string
+     *     date_rows: Collection<int, array{date: string, date_label: string, cells: array<int, array{quantity: int, amount: float}>, row_totals: array{quantity: int, amount: float}}>,
+     *     column_totals: array<int, array{quantity: int, amount: float}>,
+     *     grand_totals: array{quantity: int, amount: float}
      * }
      */
-    public function build(int $year, int $month, string $mode): array
+    public function build(int $year, int $month): array
     {
         $monthStart = Carbon::create($year, $month, 1)->startOfMonth();
         $monthEnd = $monthStart->copy()->endOfMonth();
-
-        $mode = $mode === self::MODE_AMOUNT ? self::MODE_AMOUNT : self::MODE_QUANTITY;
 
         $categories = Category::query()
             ->with(['menuItems' => fn ($q) => $q->orderBy('name')])
@@ -57,81 +49,84 @@ class MonthlyItemSalesMatrixService
             ->map(fn ($id) => (int) $id)
             ->all();
 
-        $aggregates = $this->aggregatesForMonth($monthStart, $monthEnd, $mode);
+        $aggregates = $this->aggregatesForMonth($monthStart, $monthEnd);
 
         $dates = $this->datesInMonth($monthStart, $monthEnd);
 
-        $columnTotals = array_fill_keys($itemIds, 0);
-        $grandTotal = 0.0;
+        $columnTotals = [];
+        foreach ($itemIds as $mid) {
+            $columnTotals[$mid] = ['quantity' => 0, 'amount' => 0.0];
+        }
 
-        $dateRows = $dates->map(function (Carbon $day) use ($aggregates, $itemIds, $mode, &$columnTotals, &$grandTotal) {
+        $grandQty = 0;
+        $grandAmt = 0.0;
+
+        $dateRows = $dates->map(function (Carbon $day) use ($aggregates, $itemIds, &$columnTotals, &$grandQty, &$grandAmt) {
             $key = $day->toDateString();
             $cells = [];
-            $rowTotal = 0.0;
+            $rowQty = 0;
+            $rowAmt = 0.0;
 
             foreach ($itemIds as $mid) {
-                $v = (float) ($aggregates[$key][$mid] ?? 0);
-                if ($mode === self::MODE_QUANTITY) {
-                    $v = (int) round($v);
-                } else {
-                    $v = round($v, 2);
-                }
-                $cells[$mid] = $v;
-                $columnTotals[$mid] = ($columnTotals[$mid] ?? 0) + $v;
-                $rowTotal += $v;
+                $entry = $aggregates[$key][$mid] ?? null;
+                $q = $entry !== null ? (float) ($entry['quantity'] ?? 0) : 0.0;
+                $a = $entry !== null ? (float) ($entry['amount'] ?? 0) : 0.0;
+
+                $qty = (int) round($q);
+                $amt = round($a, 2);
+
+                $cells[$mid] = ['quantity' => $qty, 'amount' => $amt];
+                $columnTotals[$mid]['quantity'] += $qty;
+                $columnTotals[$mid]['amount'] += $amt;
+                $rowQty += $qty;
+                $rowAmt += $amt;
             }
 
-            if ($mode === self::MODE_QUANTITY) {
-                $rowTotal = (int) round($rowTotal);
-            } else {
-                $rowTotal = round($rowTotal, 2);
-            }
-            $grandTotal += $rowTotal;
+            $grandQty += $rowQty;
+            $grandAmt += $rowAmt;
 
             return [
                 'date' => $key,
                 'date_label' => $day->format('Y-m-d'),
                 'cells' => $cells,
-                'row_total' => $rowTotal,
+                'row_totals' => [
+                    'quantity' => $rowQty,
+                    'amount' => round($rowAmt, 2),
+                ],
             ];
         });
 
-        if ($mode === self::MODE_QUANTITY) {
-            $grandTotal = (int) round($grandTotal);
-            foreach ($columnTotals as $k => $v) {
-                $columnTotals[$k] = (int) round((float) $v);
-            }
-        } else {
-            $grandTotal = round($grandTotal, 2);
-            foreach ($columnTotals as $k => $v) {
-                $columnTotals[$k] = round((float) $v, 2);
-            }
+        foreach ($columnTotals as $k => $tot) {
+            $columnTotals[$k] = [
+                'quantity' => (int) $tot['quantity'],
+                'amount' => round((float) $tot['amount'], 2),
+            ];
         }
 
         return [
             'year' => $year,
             'month' => $month,
             'month_label' => $monthStart->format('F Y'),
-            'mode' => $mode,
             'categories' => $categories,
             'item_ids' => $itemIds,
             'date_rows' => $dateRows,
             'column_totals' => $columnTotals,
-            'grand_total' => $grandTotal,
-            'value_label' => $mode === self::MODE_QUANTITY ? 'Quantity' : 'Sales (¥)',
+            'grand_totals' => [
+                'quantity' => (int) $grandQty,
+                'amount' => round($grandAmt, 2),
+            ],
         ];
     }
 
     /**
-     * @return array<string, array<int, float>> [dateString => [menu_item_id => value]]
+     * @return array<string, array<int, array{quantity: float, amount: float}>>
      */
-    protected function aggregatesForMonth(Carbon $monthStart, Carbon $monthEnd, string $mode): array
+    protected function aggregatesForMonth(Carbon $monthStart, Carbon $monthEnd): array
     {
         $dateSql = $this->orderDateSqlExpression();
 
         $qtyExpr = 'SUM(order_items.quantity)';
         $amtExpr = 'SUM(order_items.quantity * order_items.price)';
-        $selectValue = $mode === self::MODE_AMOUNT ? "{$amtExpr} as v" : "{$qtyExpr} as v";
 
         $rows = DB::table('order_items')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
@@ -144,7 +139,8 @@ class MonthlyItemSalesMatrixService
             ->select([
                 DB::raw("{$dateSql} as sale_day"),
                 'order_items.menu_item_id',
-                DB::raw($selectValue),
+                DB::raw("{$qtyExpr} as qty"),
+                DB::raw("{$amtExpr} as amt"),
             ])
             ->get();
 
@@ -155,7 +151,10 @@ class MonthlyItemSalesMatrixService
             if (! isset($out[$day])) {
                 $out[$day] = [];
             }
-            $out[$day][$mid] = (float) $row->v;
+            $out[$day][$mid] = [
+                'quantity' => (float) $row->qty,
+                'amount' => (float) $row->amt,
+            ];
         }
 
         return $out;

@@ -71,7 +71,6 @@ class MonthlyItemSalesMatrixTest extends TestCase
             ->get(route('reporting.monthly-item-sales-matrix', [
                 'year' => 2026,
                 'month' => 5,
-                'mode' => 'quantity',
             ]))
             ->assertOk()
             ->assertSee('Pizza Category')
@@ -80,18 +79,11 @@ class MonthlyItemSalesMatrixTest extends TestCase
             ->assertSee('Classic Burger')
             ->assertSee('Coke')
             ->assertSee('Item sales matrix')
-            ->assertSee('2026-05-03');
-
-        // May 03 row should reflect only completed order: pizza 2, coke 3, burger 0
-        // Use row fragment check via page content patterns
-        $this->actingAs($this->actingAdmin())
-            ->get(route('reporting.monthly-item-sales-matrix', [
-                'year' => 2026,
-                'month' => 5,
-                'mode' => 'amount',
-            ]))
-            ->assertOk()
-            ->assertSee('Sales (¥)');
+            ->assertSee('Quantity + sales (¥)')
+            ->assertSee('2026-05-03')
+            // May 03: pizza qty 2 / ¥2,400 ; coke qty 3 / ¥600 ; burger 0 / ¥0
+            ->assertSee('2,400')
+            ->assertSee('600');
     }
 
     public function test_csv_export_streams_utf8_payload(): void
@@ -116,7 +108,6 @@ class MonthlyItemSalesMatrixTest extends TestCase
             ->get(route('reporting.monthly-item-sales-matrix.csv', [
                 'year' => 2026,
                 'month' => 5,
-                'mode' => 'quantity',
             ]));
         $res->assertOk();
         $bin = $res->streamedContent();
@@ -126,6 +117,8 @@ class MonthlyItemSalesMatrixTest extends TestCase
         $this->assertStringContainsString('TOTAL', $bin);
         $this->assertStringContainsString('Solo', $bin);
         $this->assertStringContainsString('OneItem', $bin);
+        $this->assertStringContainsString('7', $bin);
+        $this->assertStringContainsString('70.00', $bin);
     }
 
     public function test_pdf_export_returns_pdf_stream(): void
@@ -150,7 +143,6 @@ class MonthlyItemSalesMatrixTest extends TestCase
             ->get(route('reporting.monthly-item-sales-matrix.pdf', [
                 'year' => 2026,
                 'month' => 6,
-                'mode' => 'quantity',
             ]));
 
         $res->assertOk();

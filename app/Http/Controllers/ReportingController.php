@@ -72,12 +72,11 @@ class ReportingController extends Controller
     {
         $year = (int) $request->query('year', now()->year);
         $month = (int) $request->query('month', now()->month);
-        $mode = (string) $request->query('mode', MonthlyItemSalesMatrixService::MODE_QUANTITY);
 
         $year = max(2000, min(2100, $year));
         $month = max(1, min(12, $month));
 
-        $report = $this->monthlyItemSalesMatrix->build($year, $month, $mode);
+        $report = $this->monthlyItemSalesMatrix->build($year, $month);
 
         return view('reporting.monthly-item-sales-matrix', [
             'report' => $report,
@@ -92,14 +91,12 @@ class ReportingController extends Controller
     {
         $year = max(2000, min(2100, (int) $request->query('year', now()->year)));
         $month = max(1, min(12, (int) $request->query('month', now()->month)));
-        $mode = (string) $request->query('mode', MonthlyItemSalesMatrixService::MODE_QUANTITY);
 
-        $report = $this->monthlyItemSalesMatrix->build($year, $month, $mode);
+        $report = $this->monthlyItemSalesMatrix->build($year, $month);
         $filename = sprintf(
-            'item-sales-matrix_%d-%02d_%s.csv',
+            'item-sales-matrix_%d-%02d.csv',
             $report['year'],
-            $report['month'],
-            $report['mode']
+            $report['month']
         );
 
         $headers = [
@@ -117,45 +114,37 @@ class ReportingController extends Controller
             $itemIds = $report['item_ids'];
             $cats = $report['categories'];
 
-            $row1 = ['Date'];
-            $row2 = [''];
+            $header = ['Date'];
             foreach ($cats as $cat) {
-                $n = $cat['items']->count();
-                for ($i = 0; $i < $n; $i++) {
-                    $row1[] = $cat['name'];
-                }
                 foreach ($cat['items'] as $item) {
-                    $row2[] = $item['name'];
+                    $header[] = "{$cat['name']} — {$item['name']} (qty)";
+                    $header[] = "{$cat['name']} — {$item['name']} (¥)";
                 }
             }
-            $row1[] = 'Daily Total';
-            $row2[] = '';
-
-            fputcsv($out, $row1);
-            fputcsv($out, $row2);
+            $header[] = 'Daily total (qty)';
+            $header[] = 'Daily total (¥)';
+            fputcsv($out, $header);
 
             foreach ($report['date_rows'] as $dr) {
                 $line = [$dr['date_label']];
                 foreach ($itemIds as $mid) {
-                    $v = $dr['cells'][$mid] ?? ($report['mode'] === MonthlyItemSalesMatrixService::MODE_QUANTITY ? 0 : 0.0);
-                    $line[] = $report['mode'] === MonthlyItemSalesMatrixService::MODE_QUANTITY ? (string) $v : number_format((float) $v, 2, '.', '');
+                    $cell = $dr['cells'][$mid] ?? ['quantity' => 0, 'amount' => 0.0];
+                    $line[] = (string) $cell['quantity'];
+                    $line[] = number_format((float) $cell['amount'], 2, '.', '');
                 }
-                $line[] = $report['mode'] === MonthlyItemSalesMatrixService::MODE_QUANTITY
-                    ? (string) $dr['row_total']
-                    : number_format((float) $dr['row_total'], 2, '.', '');
+                $line[] = (string) $dr['row_totals']['quantity'];
+                $line[] = number_format((float) $dr['row_totals']['amount'], 2, '.', '');
                 fputcsv($out, $line);
             }
 
             $totalLine = ['TOTAL'];
             foreach ($itemIds as $mid) {
-                $v = $report['column_totals'][$mid] ?? 0;
-                $totalLine[] = $report['mode'] === MonthlyItemSalesMatrixService::MODE_QUANTITY
-                    ? (string) $v
-                    : number_format((float) $v, 2, '.', '');
+                $t = $report['column_totals'][$mid] ?? ['quantity' => 0, 'amount' => 0.0];
+                $totalLine[] = (string) $t['quantity'];
+                $totalLine[] = number_format((float) $t['amount'], 2, '.', '');
             }
-            $totalLine[] = $report['mode'] === MonthlyItemSalesMatrixService::MODE_QUANTITY
-                ? (string) $report['grand_total']
-                : number_format((float) $report['grand_total'], 2, '.', '');
+            $totalLine[] = (string) $report['grand_totals']['quantity'];
+            $totalLine[] = number_format((float) $report['grand_totals']['amount'], 2, '.', '');
             fputcsv($out, $totalLine);
 
             fclose($out);
@@ -166,18 +155,16 @@ class ReportingController extends Controller
     {
         $year = max(2000, min(2100, (int) $request->query('year', now()->year)));
         $month = max(1, min(12, (int) $request->query('month', now()->month)));
-        $mode = (string) $request->query('mode', MonthlyItemSalesMatrixService::MODE_QUANTITY);
 
-        $report = $this->monthlyItemSalesMatrix->build($year, $month, $mode);
+        $report = $this->monthlyItemSalesMatrix->build($year, $month);
 
         $pdf = Pdf::loadView('reporting.monthly-item-sales-matrix-pdf', compact('report'))
             ->setPaper('a4', 'landscape');
 
         return $pdf->stream(sprintf(
-            'item-sales-matrix_%d-%02d_%s.pdf',
+            'item-sales-matrix_%d-%02d.pdf',
             $report['year'],
-            $report['month'],
-            $report['mode']
+            $report['month']
         ));
     }
 
