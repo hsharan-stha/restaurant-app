@@ -19,14 +19,14 @@ class PaymentController extends Controller
     {
         $order->load(['invoice', 'table', 'payments', 'customerSession']);
         if (! $order->invoice) {
-            return redirect()->route('orders.show', $order)
+            return redirect()->route('dashboard')
                 ->withErrors(['payment' => 'Complete the order before paying (status must be completed).']);
         }
 
         $checkoutOrders = $this->paymentService->getCheckoutOrders($order);
 
         if ($checkoutOrders->isEmpty()) {
-            return redirect()->route('orders.show', $order)->with('status', 'Already paid.');
+            return redirect()->route('dashboard')->with('status', 'Already paid.');
         }
 
         $subtotal = $checkoutOrders->sum(fn ($checkoutOrder) => (float) $checkoutOrder->invoice->subtotal);
@@ -43,12 +43,21 @@ class PaymentController extends Controller
             return back()->withErrors(['payment' => 'Invoice not available yet.']);
         }
 
+        $checkoutOrders = $this->paymentService->getCheckoutOrders($order);
+        $checkoutOrderIds = $checkoutOrders->pluck('id')->values();
+
         try {
             $this->paymentService->processLocalPayment($order, PaymentMethod::Cash);
         } catch (\Throwable $e) {
             return back()->withErrors(['payment' => $e->getMessage()]);
         }
 
-        return redirect()->route('orders.show', $order)->with('status', 'Payment recorded.');
+        return redirect()->route('bills.thermal', [
+            'order' => $order,
+            'ids' => $checkoutOrderIds->implode(','),
+            'autoprint' => 1,
+            'paper' => '80',
+            'return_to' => route('dashboard'),
+        ])->with('status', 'Payment recorded.');
     }
 }

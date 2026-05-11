@@ -12,14 +12,14 @@ class OrderRepository implements OrderRepositoryInterface
     public function find(int $id): ?Order
     {
         return Order::query()
-            ->with(['table', 'customerSession', 'items.menuItem', 'invoice', 'payments'])
+            ->with(['table', 'customerSession', 'diningSession', 'items.menuItem', 'invoice', 'payments'])
             ->find($id);
     }
 
     public function allWithRelations(): Collection
     {
         return Order::query()
-            ->with(['table', 'customerSession', 'items.menuItem', 'invoice', 'payments'])
+            ->with(['table', 'customerSession', 'diningSession', 'items.menuItem', 'invoice', 'payments'])
             ->orderByDesc('id')
             ->get();
     }
@@ -27,7 +27,7 @@ class OrderRepository implements OrderRepositoryInterface
     public function newerThanId(int $lastSeenId): Collection
     {
         return Order::query()
-            ->with(['table', 'customerSession', 'items.menuItem', 'invoice', 'payments'])
+            ->with(['table', 'customerSession', 'diningSession', 'items.menuItem', 'invoice', 'payments'])
             ->where('id', '>', $lastSeenId)
             ->orderBy('id')
             ->get();
@@ -36,7 +36,7 @@ class OrderRepository implements OrderRepositoryInterface
     public function checkoutRequestedAfter(?string $lastSeenCheckoutAt): Collection
     {
         return Order::query()
-            ->with(['table', 'customerSession', 'items.menuItem', 'invoice', 'payments'])
+            ->with(['table', 'customerSession', 'diningSession', 'items.menuItem', 'invoice', 'payments'])
             ->whereNotNull('checkout_requested_at')
             ->when(
                 $lastSeenCheckoutAt,
@@ -55,6 +55,6 @@ class OrderRepository implements OrderRepositoryInterface
     {
         $order->update($attributes);
 
-        return $order->fresh(['table', 'customerSession', 'items.menuItem', 'invoice', 'payments']);
+        return $order->fresh(['table', 'customerSession', 'diningSession', 'items.menuItem', 'invoice', 'payments']);
     }
 }

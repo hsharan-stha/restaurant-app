@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\OrderStatus;
+use App\Enums\PreparationStatus;
 use App\Enums\TableStatus;
 use App\Models\DiningTable;
 use Illuminate\Support\Collection;
@@ -20,15 +21,16 @@ final class DashboardFloorVisual
             fn ($o) => $o->status !== OrderStatus::CheckoutDone
         )->values();
 
-        if ($ordersForTable->contains(fn ($o) => $o->status === OrderStatus::Pending)) {
+        $items = $ordersForTable->flatMap(fn ($order) => $order->items ?? collect());
+        if ($items->contains(fn ($item) => $item->preparation_status === PreparationStatus::Pending)) {
             return 'pending';
         }
 
-        if ($ordersForTable->contains(fn ($o) => $o->status === OrderStatus::Preparing)) {
+        if ($items->contains(fn ($item) => $item->preparation_status === PreparationStatus::Preparing)) {
             return 'preparing';
         }
 
-        if ($ordersForTable->contains(fn ($o) => $o->status === OrderStatus::Completed)) {
+        if ($items->contains(fn ($item) => $item->preparation_status === PreparationStatus::Ready)) {
             return 'completed_blue';
         }
 

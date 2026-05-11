@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DiningSessionStatus;
 use App\Enums\OrderStatus;
 use App\Enums\SessionStatus;
 use App\Models\Category;
 use App\Models\CustomerSession;
+use App\Models\DiningSession;
 use App\Models\DiningTable;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Enums\PreparationStatus;
 use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Services\OrderService;
 use App\Support\DashboardFloorVisual;
@@ -40,17 +43,39 @@ class DashboardController extends Controller
             ->keyBy('table_id');
 
         $orders = Order::query()
-            ->with(['items.menuItem', 'invoice', 'payments'])
+            ->with(['items.menuItem', 'invoice', 'payments', 'diningSession'])
             ->whereIn('table_id', $tables->pluck('id'))
             ->orderByDesc('id')
             ->get()
             ->groupBy('table_id');
+        $openDiningSessionsByTable = DiningSession::query()
+            ->whereIn('status', [
+                DiningSessionStatus::Open->value,
+                DiningSessionStatus::InProgress->value,
+                DiningSessionStatus::FoodDelivered->value,
+            ])
+            ->whereIn('table_id', $tables->pluck('id'))
+            ->get()
+            ->keyBy('table_id');
 
-        $payload = $tables->map(function (DiningTable $table) use ($orders, $sessionsByTable) {
+        $payload = $tables->map(function (DiningTable $table) use ($orders, $sessionsByTable, $openDiningSessionsByTable) {
             /** @var Collection<int, Order> $forTable */
             $forTable = $orders->get($table->id, collect());
             $visual = DashboardFloorVisual::forTable($table, $forTable);
             $activeForCounts = $forTable->filter(fn ($o) => $o->status !== OrderStatus::CheckoutDone);
+            $activeItems = $activeForCounts
+                ->flatMap(fn (Order $order) => $order->items);
+            $openSession = $openDiningSessionsByTable->get($table->id);
+            $hasCompletedAwaitingCheckout = $forTable->contains(fn ($o) => $o->status === OrderStatus::Completed);
+            $allPaid = $forTable->isNotEmpty() && $forTable->every(fn ($o) => $o->status === OrderStatus::CheckoutDone);
+            $displayStatus = $table->status->value;
+            if ($openSession && $openSession->status === DiningSessionStatus::FoodDelivered) {
+                $displayStatus = 'checkout_pending';
+            } elseif (($allPaid && ! $openSession) || $openSession?->status === DiningSessionStatus::Completed) {
+                $displayStatus = 'paid';
+            } elseif ($openSession) {
+                $displayStatus = 'occupied';
+            }
 
             return [
                 'id' => $table->id,
@@ -67,15 +92,26 @@ class DashboardController extends Controller
                 'rotation' => $table->rotation,
                 'fill_color' => $table->fill_color,
                 'seat_capacity' => $table->seat_capacity,
-                'status' => $table->status->value,
+                'status' => $displayStatus,
                 'visual' => $visual,
                 'counts' => [
-                    'pending' => $activeForCounts->where('status', OrderStatus::Pending)->count(),
-                    'preparing' => $activeForCounts->where('status', OrderStatus::Preparing)->count(),
-                    'completed' => $activeForCounts->where('status', OrderStatus::Completed)->count(),
+                    'pending' => $activeItems->where('preparation_status', PreparationStatus::Pending)->count(),
+                    'preparing' => $activeItems->where('preparation_status', PreparationStatus::Preparing)->count(),
+                    'ready' => $activeItems->where('preparation_status', PreparationStatus::Ready)->count(),
+                    'delivered' => $activeItems->where('preparation_status', PreparationStatus::Delivered)->count(),
                 ],
                 'pending_order_ids' => $activeForCounts->where('status', OrderStatus::Pending)->pluck('id')->values()->all(),
                 'guest_party_size' => $sessionsByTable->get($table->id)?->party_size,
+                'dining_session' => $openSession ? [
+                    'id' => $openSession->id,
+                    'code' => $openSession->session_code,
+                    'status' => $openSession->status->value,
+                    'started_at' => $openSession->started_at?->toIso8601String(),
+                    'subtotal' => (string) $openSession->subtotal,
+                    'tax' => (string) $openSession->tax,
+                    'discount' => (string) $openSession->discount,
+                    'grand_total' => (string) $openSession->grand_total,
+                ] : null,
             ];
         });
 
@@ -93,11 +129,11 @@ class DashboardController extends Controller
     {
         $orders = Order::query()
             ->where('table_id', $diningTable->id)
-            ->with(['items.menuItem', 'invoice', 'payments', 'customerSession'])
+            ->with(['items.menuItem', 'invoice', 'payments', 'customerSession', 'diningSession'])
             ->orderByDesc('id')
             ->get();
 
-        $sessions = $orders->groupBy(fn ($o) => $o->customer_session_id ?: 'single-'.$o->id);
+        $sessions = $orders->groupBy(fn ($o) => $o->dining_session_id ?: $o->customer_session_id ?: 'single-'.$o->id);
 
         return response()->json([
             'table' => [
@@ -117,6 +153,14 @@ class DashboardController extends Controller
                 ->values()
                 ->map(fn (Order $o) => $this->serializeOrderForPanel($o)),
             'sessions' => $sessions->map(fn (Collection $group) => [
+                'dining_session_id' => $group->first()?->dining_session_id,
+                'session_code' => $group->first()?->diningSession?->session_code,
+                'session_status' => $group->first()?->diningSession?->status?->value,
+                'started_at' => $group->first()?->diningSession?->started_at?->toIso8601String(),
+                'subtotal' => (string) ($group->first()?->diningSession?->subtotal ?? 0),
+                'tax' => (string) ($group->first()?->diningSession?->tax ?? 0),
+                'discount' => (string) ($group->first()?->diningSession?->discount ?? 0),
+                'grand_total' => (string) ($group->first()?->diningSession?->grand_total ?? $group->sum('total_amount')),
                 'customer_session_id' => $group->first()?->customer_session_id,
                 'orders' => $group->map(fn (Order $o) => $this->serializeOrderForPanel($o))->values(),
             ])->values(),

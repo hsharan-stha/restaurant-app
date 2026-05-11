@@ -1,6 +1,5 @@
 @php
     use App\Enums\OrderStatus;
-    use App\Enums\PaymentStatus;
 
     $formatAgeLabel = function ($dateTime): string {
         if (! $dateTime) {
@@ -75,9 +74,6 @@
                     </div>
                     <div class="flex flex-col items-end gap-1">
                         @include('partials.status-badge', ['status' => $order->status])
-                        @if($order->status !== OrderStatus::Pending)
-                            <a href="{{ route('orders.show', $order) }}" class="restaurant-dashboard-muted text-xl hover:text-white">Details ></a>
-                        @endif
                     </div>
                 </div>
                 @if(in_array($order->status, [OrderStatus::Pending, OrderStatus::Preparing], true))
@@ -118,9 +114,6 @@
                             <input type="hidden" name="status" value="{{ OrderStatus::Completed->value }}">
                             <button type="submit" class="rounded-md bg-orange-700 px-4 py-2.5 text-xl text-white hover:bg-orange-600">Mark completed</button>
                         </form>
-                    @endif
-                    @if($order->status === OrderStatus::Completed && $order->invoice && ! $order->payments->contains(fn ($p) => $p->status === PaymentStatus::Completed))
-                        <a href="{{ route('payments.create', $order) }}" class="rounded-md bg-rose-700 px-4 py-2.5 text-xl text-white hover:bg-rose-600">Checkout</a>
                     @endif
                 </div>
             </article>

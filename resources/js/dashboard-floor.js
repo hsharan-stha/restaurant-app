@@ -25,6 +25,18 @@ function tableDisplayLabel(tableName, tableNumber) {
     return `Table ${tableNumber ?? ''}`;
 }
 
+function tableCountsLine(model) {
+    const c = model?.counts ?? {};
+    const p = Number(c.pending ?? 0);
+    const pr = Number(c.preparing ?? 0);
+    const r = Number(c.ready ?? 0);
+    const d = Number(c.delivered ?? 0);
+    if (p + pr + r + d === 0) {
+        return '';
+    }
+    return `\nP:${p} PR:${pr} R:${r} D:${d}`;
+}
+
 function csrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 }
@@ -127,8 +139,8 @@ function buildTableGroup(model) {
     const baseLabel = model.table_name ?? `Table ${model.table_number ?? ''}`;
     const labelText =
         model.guest_party_size != null && model.guest_party_size !== ''
-            ? `${baseLabel}\n👥 ${model.guest_party_size}`
-            : baseLabel;
+            ? `${baseLabel}\n👥 ${model.guest_party_size}${tableCountsLine(model)}`
+            : `${baseLabel}${tableCountsLine(model)}`;
     const label = new Konva.Text({
         name: 'table-label',
         text: labelText,
@@ -170,6 +182,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlPanelTemplate = root.dataset.urlPanelTemplate ?? '';
     const urlOrderStatusTemplate = root.dataset.urlOrderStatusTemplate ?? '';
     const urlOrdersBase = (root.dataset.urlOrdersBase ?? '').replace(/\/$/, '');
+    const urlItemPreparingTemplate = root.dataset.urlItemPreparingTemplate ?? '';
+    const urlItemReadyTemplate = root.dataset.urlItemReadyTemplate ?? '';
+    const urlItemDeliverTemplate = root.dataset.urlItemDeliverTemplate ?? '';
+    const urlDeliverAllReadyTemplate = root.dataset.urlDeliverAllReadyTemplate ?? '';
 
     const drawer = document.getElementById('df-drawer');
     const drawerBackdrop = document.getElementById('df-drawer-backdrop');
@@ -181,8 +197,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const activeOrdersEl = document.getElementById('df-active-orders');
     const statusActionsEl = document.getElementById('df-status-actions');
     const sessionHistoryEl = document.getElementById('df-session-history');
+    const sessionActionsEl = document.getElementById('df-session-actions');
+    const mobileSessionBar = document.getElementById('df-mobile-session-bar');
     const liveCountEl = document.getElementById('df-live-count');
     const searchInput = document.getElementById('df-search');
+    const checkoutModal = document.getElementById('df-checkout-modal');
+    const checkoutSummary = document.getElementById('df-checkout-summary');
+    const checkoutCancel = document.getElementById('df-checkout-cancel');
+    const checkoutConfirm = document.getElementById('df-checkout-confirm');
 
     /** Menu catalog from last table panel load (for add-item dropdown). */
     let panelMenuCatalog = null;
@@ -304,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const base = t.table_name ?? `Table ${t.table_number ?? ''}`;
                     const guest = t.guest_party_size;
                     lbl.text(
-                        guest != null && guest !== '' ? `${base}\n👥 ${guest}` : base,
+                        guest != null && guest !== '' ? `${base}\n👥 ${guest}${tableCountsLine(t)}` : `${base}${tableCountsLine(t)}`,
                     );
                 }
             }
@@ -371,6 +393,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return urlOrderStatusTemplate.replace('__ORDER__', String(orderId));
     }
 
+    function itemActionUrl(template, orderId, itemId) {
+        return template
+            .replace('__ORDER__', String(orderId))
+            .replace('__ITEM__', String(itemId));
+    }
+
+    function deliverAllReadyUrl(orderId) {
+        return urlDeliverAllReadyTemplate.replace('__ORDER__', String(orderId));
+    }
+
     function openDrawer() {
         drawer?.classList.remove('translate-x-full');
         drawer?.setAttribute('aria-hidden', 'false');
@@ -406,28 +438,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderLineItem(order, it, editable) {
-        const opts = it.options && typeof it.options === 'object' ? it.options : {};
-        const spiceVal = opts.spice_level ?? '';
-        const toppingsStr = Array.isArray(opts.toppings) ? opts.toppings.join(', ') : '';
+        const prep = String(it.preparation_status ?? 'pending');
+        const statusMap = {
+            pending: { label: 'Pending', cls: 'bg-red-950/40 text-red-200 border-red-800/50' },
+            preparing: { label: 'Preparing', cls: 'bg-orange-950/40 text-orange-200 border-orange-800/50' },
+            ready: { label: 'Ready', cls: 'bg-blue-950/40 text-blue-200 border-blue-800/50' },
+            delivered: { label: 'Delivered', cls: 'bg-emerald-950/40 text-emerald-200 border-emerald-800/50' },
+        };
+        const statusMeta = statusMap[prep] ?? statusMap.pending;
+        const remaining = Number(it.remaining_quantity ?? Math.max(0, Number(it.quantity ?? 0) - Number(it.delivered_quantity ?? 0)));
+        const deliveredQty = Number(it.delivered_quantity ?? 0);
+        const canDeliver = remaining > 0;
+        const prepActions = `
+            <div class="mt-2 flex flex-wrap gap-1.5">
+                <button type="button" data-df-item-action="mark-preparing" data-order-id="${order.id}" data-item-id="${it.id}" class="rounded-md border border-orange-900/60 px-2 py-1 text-[10px] font-semibold text-orange-200 hover:bg-orange-950/50">Mark Preparing</button>
+                <button type="button" data-df-item-action="mark-ready" data-order-id="${order.id}" data-item-id="${it.id}" class="rounded-md border border-blue-900/60 px-2 py-1 text-[10px] font-semibold text-blue-200 hover:bg-blue-950/50">Mark Ready</button>
+                <button type="button" data-df-item-action="deliver" data-order-id="${order.id}" data-item-id="${it.id}" data-remaining="${remaining}" ${canDeliver ? '' : 'disabled'} class="rounded-md border border-emerald-900/60 bg-emerald-950/20 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-950/50 disabled:cursor-not-allowed disabled:opacity-40">Deliver Item</button>
+            </div>`;
         const ctrls = editable
             ? `<div class="mt-3 flex flex-wrap items-center gap-2">
                     <button type="button" data-df-pos-action="dec" data-order-id="${order.id}" data-item-id="${it.id}" class="min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-orange-700 bg-orange-950/60 text-xl font-bold leading-none text-orange-50 hover:bg-orange-900">−</button>
                     <span class="min-w-[2.25rem] text-center text-base font-semibold tabular-nums text-orange-50">${it.quantity}</span>
                     <button type="button" data-df-pos-action="inc" data-order-id="${order.id}" data-item-id="${it.id}" class="min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-orange-700 bg-orange-950/60 text-xl font-bold leading-none text-orange-50 hover:bg-orange-900">+</button>
                     <button type="button" data-df-pos-action="remove" data-order-id="${order.id}" data-item-id="${it.id}" class="ml-auto rounded-xl border border-red-900/60 bg-red-950/40 px-3 py-2 text-xs font-semibold text-red-200">Remove</button>
-                </div>
-                <label class="mt-3 block text-[10px] font-semibold uppercase tracking-wide text-orange-700">Special notes</label>
-                <textarea data-df-pos-notes data-order-id="${order.id}" data-item-id="${it.id}" rows="2" class="mt-1 w-full rounded-xl border border-orange-900/50 bg-black/40 px-3 py-2 text-sm text-orange-50 placeholder:text-orange-900 focus:border-orange-500 focus:outline-none">${escapeHtml(it.notes ?? '')}</textarea>
-                <label class="mt-2 block text-[10px] font-semibold uppercase tracking-wide text-orange-700">Spice</label>
-                <select data-df-pos-spice data-order-id="${order.id}" data-item-id="${it.id}" class="mt-1 w-full rounded-xl border border-orange-900/50 bg-black/40 px-3 py-2 text-sm text-orange-50">
-                    <option value="">—</option>
-                    <option value="mild" ${spiceVal === 'mild' ? 'selected' : ''}>Mild</option>
-                    <option value="medium" ${spiceVal === 'medium' ? 'selected' : ''}>Medium</option>
-                    <option value="hot" ${spiceVal === 'hot' ? 'selected' : ''}>Hot</option>
-                    <option value="extra_hot" ${spiceVal === 'extra_hot' ? 'selected' : ''}>Extra hot</option>
-                </select>
-                <label class="mt-2 block text-[10px] font-semibold uppercase tracking-wide text-orange-700">Toppings (comma-separated)</label>
-                <input type="text" data-df-pos-toppings data-order-id="${order.id}" data-item-id="${it.id}" value="${escapeHtml(toppingsStr)}" class="mt-1 w-full rounded-xl border border-orange-900/50 bg-black/40 px-3 py-2 text-sm text-orange-50 placeholder:text-orange-900 focus:border-orange-500 focus:outline-none" placeholder="e.g. extra cheese, bacon" />`
+                </div>`
             : `<p class="mt-2 text-sm text-orange-600">Qty <span class="font-semibold text-orange-200">${it.quantity}</span></p>`;
 
         return `
@@ -436,10 +470,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="min-w-0 flex-1">
                         <p class="text-base font-semibold text-orange-50">${escapeHtml(it.name)}</p>
                         <p class="mt-0.5 text-xs text-orange-700">¥${escapeHtml(it.price)} each</p>
+                        <div class="mt-1 flex flex-wrap items-center gap-2 text-[10px]">
+                            <span class="rounded-full border px-2 py-0.5 ${statusMeta.cls}">${statusMeta.label}</span>
+                            <span class="text-orange-500">Delivered ${deliveredQty}/${it.quantity}</span>
+                            <span class="text-orange-700">Remain ${remaining}</span>
+                        </div>
                     </div>
                     <p class="shrink-0 text-base font-bold tabular-nums text-orange-100">¥${escapeHtml(it.line_total)}</p>
                 </div>
                 ${ctrls}
+                ${prepActions}
             </div>`;
     }
 
@@ -485,19 +525,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>`;
         }
 
-        const taxPct =
-            order.tax_rate != null ? String(Math.round(Number(order.tax_rate) * 1000) / 10).replace(/\.0$/, '') : '0';
-
         const lines = (order.items ?? []).map((it) => renderLineItem(order, it, editable)).join('');
+        const readyCount = (order.items ?? []).filter((it) => String(it.preparation_status) === 'ready' && Number(it.remaining_quantity ?? 0) > 0).length;
 
         const totals = `
             <div class="mt-3 space-y-1 border-t border-orange-950/40 pt-3 text-xs text-orange-200">
-                <div class="flex justify-between gap-2"><span>Subtotal</span><span class="tabular-nums">¥${escapeHtml(order.subtotal ?? order.total_amount)}</span></div>
-                <div class="flex justify-between gap-2"><span>Tax (${taxPct}%)</span><span class="tabular-nums">¥${escapeHtml(order.tax_amount ?? '0.00')}</span></div>
                 <div class="flex justify-between gap-2 text-sm font-semibold text-orange-50"><span>Total</span><span class="tabular-nums">¥${escapeHtml(order.grand_total ?? order.total_amount)}</span></div>
             </div>`;
 
         const addBlock = editable ? renderAddItemBlock(order) : '';
+        const deliverAllBlock = readyCount > 0
+            ? `<button type="button" data-df-order-action="deliver-all-ready" data-order-id="${order.id}" class="mt-3 w-full rounded-lg border border-emerald-800/60 bg-emerald-950/35 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-900/40">Deliver All Ready Items (${readyCount})</button>`
+            : '';
 
         return `
             <div class="rounded-xl border border-orange-900/40 bg-black/20 p-3" data-df-order-card="${order.id}">
@@ -508,6 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="mt-3 space-y-3">${lines}</div>
                 ${totals}
+                ${deliverAllBlock}
                 ${addBlock}
                 <p class="mt-2 text-[11px] text-orange-800">${formatTime(order.created_at)}</p>
             </div>`;
@@ -521,6 +561,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handlePosClick(e) {
+        const itemActionBtn = e.target.closest('[data-df-item-action]');
+        if (itemActionBtn) {
+            const action = itemActionBtn.dataset.dfItemAction;
+            const orderId = itemActionBtn.dataset.orderId;
+            const itemId = itemActionBtn.dataset.itemId;
+            if (!orderId || !itemId) {
+                return;
+            }
+            try {
+                let data;
+                if (action === 'mark-preparing') {
+                    data = await fetchJson(itemActionUrl(urlItemPreparingTemplate, orderId, itemId), { method: 'POST' });
+                } else if (action === 'mark-ready') {
+                    data = await fetchJson(itemActionUrl(urlItemReadyTemplate, orderId, itemId), { method: 'POST' });
+                } else if (action === 'deliver') {
+                    const remaining = Math.max(1, Number(itemActionBtn.dataset.remaining ?? 1));
+                    data = await fetchJson(itemActionUrl(urlItemDeliverTemplate, orderId, itemId), {
+                        method: 'POST',
+                        body: JSON.stringify({ quantity: remaining }),
+                    });
+                } else {
+                    return;
+                }
+                mergeOrderFromResponse(data.order);
+                scheduleRefresh(true);
+            } catch (err) {
+                window.alert(err instanceof Error ? err.message : 'Update failed');
+            }
+            return;
+        }
+
+        const orderActionBtn = e.target.closest('[data-df-order-action]');
+        if (orderActionBtn && orderActionBtn.dataset.dfOrderAction === 'deliver-all-ready') {
+            const orderId = orderActionBtn.dataset.orderId;
+            if (!orderId) {
+                return;
+            }
+            try {
+                const data = await fetchJson(deliverAllReadyUrl(orderId), { method: 'POST' });
+                mergeOrderFromResponse(data.order);
+                scheduleRefresh(true);
+            } catch (err) {
+                window.alert(err instanceof Error ? err.message : 'Update failed');
+            }
+            return;
+        }
+
         const btn = e.target.closest('[data-df-pos-action]');
         if (!btn || !urlOrdersBase) {
             return;
@@ -581,72 +668,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function saveNotesFromTextarea(ta) {
-        if (!urlOrdersBase) {
-            return;
-        }
-        const orderId = ta.dataset.orderId;
-        const itemId = ta.dataset.itemId;
-        if (!orderId || !itemId) {
-            return;
-        }
-        try {
-            const data = await fetchJson(`${urlOrdersBase}/${orderId}/items/${itemId}`, {
-                method: 'PATCH',
-                body: JSON.stringify({ notes: ta.value }),
-            });
-            mergeOrderFromResponse(data.order);
-            scheduleRefresh(true);
-        } catch (err) {
-            window.alert(err instanceof Error ? err.message : 'Update failed');
-        }
-    }
-
-    async function saveSpiceFromSelect(sel) {
-        if (!urlOrdersBase) {
-            return;
-        }
-        const orderId = sel.dataset.orderId;
-        const itemId = sel.dataset.itemId;
-        if (!orderId || !itemId) {
-            return;
-        }
-        try {
-            const data = await fetchJson(`${urlOrdersBase}/${orderId}/items/${itemId}`, {
-                method: 'PATCH',
-                body: JSON.stringify({
-                    options: { spice_level: sel.value === '' ? null : sel.value },
-                }),
-            });
-            mergeOrderFromResponse(data.order);
-            scheduleRefresh(true);
-        } catch (err) {
-            window.alert(err instanceof Error ? err.message : 'Update failed');
-        }
-    }
-
-    async function saveToppingsFromInput(inp) {
-        if (!urlOrdersBase) {
-            return;
-        }
-        const orderId = inp.dataset.orderId;
-        const itemId = inp.dataset.itemId;
-        if (!orderId || !itemId) {
-            return;
-        }
-        const raw = inp.value.trim();
-        const toppings = raw === '' ? [] : raw.split(',').map((s) => s.trim()).filter(Boolean);
-        try {
-            const data = await fetchJson(`${urlOrdersBase}/${orderId}/items/${itemId}`, {
-                method: 'PATCH',
-                body: JSON.stringify({ options: { toppings } }),
-            });
-            mergeOrderFromResponse(data.order);
-            scheduleRefresh(true);
-        } catch (err) {
-            window.alert(err instanceof Error ? err.message : 'Update failed');
-        }
-    }
 
     function escapeHtml(s) {
         const d = document.createElement('div');
@@ -676,14 +697,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderStatusButtons(activeOrders) {
-        if (!statusActionsEl) {
+    function renderStatusButtons(activeOrders, targetEl = statusActionsEl) {
+        if (!targetEl) {
             return;
         }
-        statusActionsEl.innerHTML = '';
+        targetEl.innerHTML = '';
         const pending = activeOrders.find((o) => o.status === 'pending');
         const preparing = activeOrders.find((o) => o.status === 'preparing');
-        const servingComplete = activeOrders.filter((o) => o.status === 'completed');
 
         const mkBtn = (label, cls, onClick) => {
             const b = document.createElement('button');
@@ -691,7 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
             b.className = `rounded-xl px-3 py-2 text-xs font-semibold ${cls}`;
             b.textContent = label;
             b.addEventListener('click', onClick);
-            statusActionsEl.appendChild(b);
+            targetEl.appendChild(b);
         };
 
         if (pending) {
@@ -704,17 +724,84 @@ document.addEventListener('DOMContentLoaded', () => {
                 patchOrderStatus(preparing.id, 'completed'),
             );
         }
-        servingComplete.forEach((o) => {
-            const label = o.order_number ? `Checkout #${o.order_number}` : `Checkout order #${o.id}`;
-            mkBtn(label, 'bg-violet-700 text-white hover:bg-violet-600', () =>
-                patchOrderStatus(o.id, 'checkout_done'),
-            );
-        });
-        if (!pending && !preparing && servingComplete.length === 0 && activeOrders.length) {
+        if (!pending && !preparing && activeOrders.length) {
             mkBtn('Refresh', 'border border-orange-800 text-orange-200 hover:bg-orange-950', () =>
                 selectedId ? loadPanel(selectedId) : undefined,
             );
         }
+    }
+
+    function openCheckoutModal(url, summary) {
+        if (!checkoutModal || !checkoutConfirm || !checkoutSummary) {
+            window.location.assign(url);
+            return;
+        }
+        checkoutConfirm.setAttribute('href', url);
+        checkoutSummary.innerHTML = `
+            <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                <span class="text-orange-700">Session</span><span>${escapeHtml(summary.sessionCode || '—')}</span>
+                <span class="text-orange-700">Total orders</span><span>${escapeHtml(String(summary.totalOrders || 0))}</span>
+                <span class="text-orange-700">Total amount</span><span class="font-semibold text-amber-200">¥${escapeHtml(summary.totalAmount || '0.00')}</span>
+                <span class="text-orange-700">Payment</span><span>${escapeHtml(summary.paymentMethod || 'Cash')}</span>
+            </div>`;
+        checkoutModal.classList.remove('hidden');
+        checkoutModal.classList.add('flex');
+    }
+
+    function closeCheckoutModal() {
+        if (!checkoutModal) return;
+        checkoutModal.classList.add('hidden');
+        checkoutModal.classList.remove('flex');
+    }
+
+    function buildSessionActions(panelData) {
+        const sessions = panelData.sessions ?? [];
+        if (!sessions.length) {
+            return '<p class="rounded-xl border border-orange-900/50 bg-black/20 px-3 py-3 text-sm text-orange-700">No dining session found.</p>';
+        }
+        const openSession =
+            sessions.find((s) => (s.orders ?? []).some((o) => o.status !== 'checkout_done')) ??
+            sessions[0];
+        const orders = openSession.orders ?? [];
+        const sessionStatus = String(openSession.session_status ?? 'open');
+        const firstOrder = orders[0];
+        if (!firstOrder) {
+            return '<p class="rounded-xl border border-orange-900/50 bg-black/20 px-3 py-3 text-sm text-orange-700">No orders in session.</p>';
+        }
+        const orderIds = orders.map((o) => o.id).join(',');
+        const isOpen = orders.some((o) => o.status !== 'checkout_done');
+        const hasCompletedForCheckout = orders.some((o) => o.status === 'completed');
+        const checkoutTarget = orders.find((o) => o.status === 'completed');
+        const runningTotal = openSession.grand_total ?? orders.reduce((sum, o) => sum + Number(o.grand_total ?? o.total_amount ?? 0), 0).toFixed(2);
+        const sessionStateClass = sessionStatus === 'food_delivered'
+            ? 'text-emerald-300 border-emerald-500/40 bg-emerald-950/25'
+            : (isOpen
+                ? (hasCompletedForCheckout ? 'text-orange-300 border-orange-500/40 bg-orange-950/25' : 'text-emerald-300 border-emerald-500/40 bg-emerald-950/25')
+                : 'text-slate-300 border-slate-600/40 bg-slate-900/30');
+        const checkoutUrl = checkoutTarget ? `/orders/${checkoutTarget.id}/pay` : '';
+        const billPreviewUrl = `/orders/${firstOrder.id}/bill/thermal?ids=${encodeURIComponent(orderIds)}&paper=80`;
+        const checkoutBtn = isOpen && hasCompletedForCheckout
+            ? `<button type="button" data-df-session-checkout="${checkoutUrl}" data-df-session-code="${escapeHtml(openSession.session_code ?? '')}" data-df-session-orders="${orders.length}" data-df-session-total="${escapeHtml(String(runningTotal))}" class="w-full rounded-xl bg-rose-700 px-3 py-2.5 text-sm font-semibold text-white hover:bg-rose-600">Checkout Session</button>`
+            : `<button type="button" disabled class="w-full cursor-not-allowed rounded-xl border border-slate-700 bg-slate-900/50 px-3 py-2.5 text-sm font-semibold text-slate-500">Checkout Session</button>`;
+
+        return `
+            <div class="sticky top-0 rounded-xl border ${sessionStateClass} p-3">
+                <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                    <span class="text-orange-700">Table</span><span>${escapeHtml(String(panelData.table?.table_name ?? `Table ${panelData.table?.table_number ?? ''}`))}</span>
+                    <span class="text-orange-700">Session</span><span>${escapeHtml(openSession.session_code ?? '—')}</span>
+                    <span class="text-orange-700">Orders</span><span>${orders.length}</span>
+                    <span class="text-orange-700">Status</span><span class="uppercase">${escapeHtml(sessionStatus.replace('_', ' '))}</span>
+                    <span class="text-orange-700">Started</span><span>${escapeHtml(formatTime(openSession.started_at || ''))}</span>
+                </div>
+                <div class="mt-2 rounded-lg border border-amber-500/40 bg-amber-950/30 px-2.5 py-2 text-right">
+                    <span class="text-[10px] uppercase tracking-wide text-amber-300/80">Running Total</span>
+                    <p class="text-lg font-bold text-amber-200">¥${escapeHtml(String(runningTotal))}</p>
+                </div>
+                <div class="mt-3 grid grid-cols-1 gap-2 text-xs">
+                    <a href="${billPreviewUrl}" target="_blank" rel="noopener" class="rounded-lg border border-orange-700 px-2 py-2 text-center text-orange-100 hover:bg-orange-950">Print Bill Preview</a>
+                </div>
+                <div class="mt-3">${checkoutBtn}</div>
+            </div>`;
     }
 
     async function loadPanel(tableId) {
@@ -724,12 +811,58 @@ document.addEventListener('DOMContentLoaded', () => {
             drawerTitle.textContent = data.table?.table_name ?? `Table ${data.table?.table_number}`;
         }
         if (drawerMeta) {
-            drawerMeta.textContent = `Table #${data.table?.table_number} · Seats ${data.table?.seat_capacity ?? '—'} · ${data.visual ?? ''}`;
+            const allItems = (data.active_orders ?? []).flatMap((o) => o.items ?? []);
+            const countBy = (s) => allItems.filter((i) => String(i.preparation_status) === s).length;
+            drawerMeta.innerHTML = `
+                <span>Table #${escapeHtml(String(data.table?.table_number ?? ''))} · Seats ${escapeHtml(String(data.table?.seat_capacity ?? '—'))}</span>
+                <span class="ml-2 inline-flex items-center gap-1 text-[10px]">
+                    <span class="rounded-full bg-red-900/35 px-1.5 py-0.5 text-red-300">P ${countBy('pending')}</span>
+                    <span class="rounded-full bg-orange-900/35 px-1.5 py-0.5 text-orange-300">PR ${countBy('preparing')}</span>
+                    <span class="rounded-full bg-blue-900/35 px-1.5 py-0.5 text-blue-300">R ${countBy('ready')}</span>
+                    <span class="rounded-full bg-emerald-900/35 px-1.5 py-0.5 text-emerald-300">D ${countBy('delivered')}</span>
+                </span>`;
+        }
+        if (sessionActionsEl) {
+            sessionActionsEl.innerHTML = buildSessionActions(data);
+        }
+        if (mobileSessionBar) {
+            const sessions = data.sessions ?? [];
+            const openSession = sessions.find((s) => (s.orders ?? []).some((o) => o.status !== 'checkout_done'));
+            const orders = openSession?.orders ?? [];
+            const checkoutTarget = orders.find((o) => o.status === 'completed');
+            if (openSession && checkoutTarget) {
+                const total = escapeHtml(String(openSession.grand_total ?? '0.00'));
+                mobileSessionBar.classList.remove('hidden', 'pointer-events-none');
+                mobileSessionBar.classList.add('pointer-events-auto');
+                mobileSessionBar.innerHTML = `<button type="button" data-df-session-checkout="/orders/${checkoutTarget.id}/pay" data-df-session-code="${escapeHtml(openSession.session_code ?? '')}" data-df-session-orders="${orders.length}" data-df-session-total="${total}" class="w-full rounded-lg bg-rose-700 py-2 text-sm font-semibold text-white">Checkout Session · ¥${total}</button>`;
+            } else {
+                mobileSessionBar.classList.add('hidden', 'pointer-events-none');
+                mobileSessionBar.innerHTML = '';
+            }
         }
         if (activeOrdersEl) {
             const act = data.active_orders ?? [];
-            activeOrdersEl.innerHTML = act.length ? act.map(renderOrderCard).join('') : '<p class="text-orange-800">No active kitchen ticket.</p>';
-            renderStatusButtons(act);
+            const actionable = act.filter((o) => o.status === 'pending' || o.status === 'preparing');
+            const completed = act.filter((o) => o.status === 'completed');
+            if (!act.length) {
+                activeOrdersEl.innerHTML = '<p class="text-orange-800">No active kitchen ticket.</p>';
+                renderStatusButtons([]);
+            } else {
+                const inlineKitchen = actionable.length
+                    ? `<div data-df-inline-kitchen-actions class="rounded-xl border border-orange-900/40 bg-black/15 p-2.5">
+                            <p class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-orange-700">Kitchen actions (latest first)</p>
+                            <div class="flex flex-wrap gap-2"></div>
+                        </div>`
+                    : '';
+                activeOrdersEl.innerHTML = [
+                    ...actionable.map(renderOrderCard),
+                    inlineKitchen,
+                    ...completed.map(renderOrderCard),
+                ].join('');
+
+                const inlineWrap = activeOrdersEl.querySelector('[data-df-inline-kitchen-actions] > div');
+                renderStatusButtons(act, inlineWrap || statusActionsEl);
+            }
         }
         if (sessionHistoryEl) {
             const sessions = data.sessions ?? [];
@@ -956,26 +1089,30 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput?.addEventListener('input', applySearchFilter);
 
     activeOrdersEl?.addEventListener('click', handlePosClick);
-    activeOrdersEl?.addEventListener('change', (e) => {
-        const sel = e.target.closest('[data-df-pos-spice]');
-        if (sel) {
-            void saveSpiceFromSelect(sel);
-        }
+    sessionActionsEl?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-df-session-checkout]');
+        if (!btn) return;
+        const url = btn.getAttribute('data-df-session-checkout');
+        if (!url) return;
+        openCheckoutModal(url, {
+            sessionCode: btn.getAttribute('data-df-session-code') ?? '',
+            totalOrders: btn.getAttribute('data-df-session-orders') ?? '0',
+            totalAmount: btn.getAttribute('data-df-session-total') ?? '0.00',
+            paymentMethod: 'Cash',
+        });
     });
-    activeOrdersEl?.addEventListener(
-        'blur',
-        (e) => {
-            const ta = e.target.closest('[data-df-pos-notes]');
-            if (ta) {
-                void saveNotesFromTextarea(ta);
-            }
-            const tops = e.target.closest('[data-df-pos-toppings]');
-            if (tops) {
-                void saveToppingsFromInput(tops);
-            }
-        },
-        true,
-    );
+    mobileSessionBar?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-df-session-checkout]');
+        if (!btn) return;
+        const url = btn.getAttribute('data-df-session-checkout');
+        if (!url) return;
+        openCheckoutModal(url, {
+            sessionCode: btn.getAttribute('data-df-session-code') ?? '',
+            totalOrders: btn.getAttribute('data-df-session-orders') ?? '0',
+            totalAmount: btn.getAttribute('data-df-session-total') ?? '0.00',
+            paymentMethod: 'Cash',
+        });
+    });
 
     window.addEventListener('restaurant:refresh-floor', () => scheduleRefresh(true));
     window.addEventListener('restaurant:order-updated', (e) => {
@@ -1043,6 +1180,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape') {
             closeDrawer();
             closeActionsMenu();
+            closeCheckoutModal();
+        }
+    });
+    checkoutCancel?.addEventListener('click', closeCheckoutModal);
+    checkoutModal?.addEventListener('click', (e) => {
+        if (e.target === checkoutModal) {
+            closeCheckoutModal();
         }
     });
 

@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\DiningSessionStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PreparationStatus;
 use App\Enums\SessionStatus;
 use App\Enums\TableStatus;
 use App\Events\CheckoutCompletedEvent;
@@ -11,6 +13,7 @@ use App\Events\OrderPlacedEvent;
 use App\Events\OrderPreparingEvent;
 use App\Events\OrderUpdated;
 use App\Models\CustomerSession;
+use App\Models\DiningSession;
 use App\Models\DiningTable;
 use App\Models\Invoice;
 use App\Models\MenuItem;
@@ -22,7 +25,8 @@ use Illuminate\Support\Facades\DB;
 class OrderService
 {
     public function __construct(
-        protected OrderRepositoryInterface $orderRepository
+        protected OrderRepositoryInterface $orderRepository,
+        protected DiningSessionService $diningSessionService,
     ) {}
 
     /**
@@ -40,8 +44,10 @@ class OrderService
     {
         return DB::transaction(function () use ($customerSession, $tableId, $lines) {
             $table = DiningTable::query()->lockForUpdate()->findOrFail($tableId);
+            $diningSession = $this->resolveDiningSession($tableId, $customerSession);
             $pendingOrder = Order::query()
                 ->where('table_id', $tableId)
+                ->where('dining_session_id', $diningSession->id)
                 ->when(
                     $customerSession,
                     fn ($query) => $query->where('customer_session_id', $customerSession->id)
@@ -64,6 +70,7 @@ class OrderService
             $order = $pendingOrder ?: $this->orderRepository->create([
                 'table_id' => $tableId,
                 'customer_session_id' => $customerSession?->id,
+                'dining_session_id' => $diningSession->id,
                 'order_number' => $nextOrderNum,
                 'status' => OrderStatus::Pending,
                 'total_amount' => 0,
@@ -71,7 +78,10 @@ class OrderService
             ]);
 
             if ($customerSession && ! $order->customer_session_id) {
-                $order->update(['customer_session_id' => $customerSession->id]);
+                $order->update([
+                    'customer_session_id' => $customerSession->id,
+                    'dining_session_id' => $diningSession->id,
+                ]);
             }
 
             foreach ($lines as $line) {
@@ -83,10 +93,15 @@ class OrderService
                     'price' => $menuItem->price,
                     'notes' => isset($line['notes']) ? (string) $line['notes'] : null,
                     'options' => isset($line['options']) && is_array($line['options']) ? $line['options'] : null,
+                    'preparation_status' => PreparationStatus::Pending,
+                    'delivered_quantity' => 0,
+                    'is_delivered' => false,
                 ]);
             }
 
             $order = $this->recalculateTotal($order);
+            $this->diningSessionService->syncTotals($diningSession);
+            $this->diningSessionService->syncProgressStatus($diningSession);
 
             $table->update(['status' => TableStatus::Occupied]);
 
@@ -117,6 +132,9 @@ class OrderService
             }
 
             $fresh = $order->fresh(['table', 'items.menuItem', 'invoice', 'payments']);
+            if ($fresh->diningSession) {
+                $this->diningSessionService->syncProgressStatus($fresh->diningSession);
+            }
 
             rescue(fn () => event(new OrderUpdated($fresh, null)), report: false);
 
@@ -176,6 +194,7 @@ class OrderService
     {
         $tableId = $order->table_id;
         $sessionId = $order->customer_session_id;
+        $diningSessionId = $order->dining_session_id;
 
         $activeQuery = Order::query()
             ->where('table_id', $tableId)
@@ -196,6 +215,13 @@ class OrderService
         DiningTable::query()->whereKey($tableId)->update(['status' => TableStatus::Available]);
 
         if (! $sessionId) {
+            if ($diningSessionId) {
+                $diningSession = DiningSession::query()->find($diningSessionId);
+                if ($diningSession) {
+                    $this->diningSessionService->closeIfNoActiveOrders($diningSession);
+                }
+            }
+
             return;
         }
 
@@ -216,6 +242,13 @@ class OrderService
             'status' => SessionStatus::Completed,
             'total_bill' => round($bill, 2),
         ]);
+
+        if ($diningSessionId) {
+            $diningSession = DiningSession::query()->find($diningSessionId);
+            if ($diningSession) {
+                $this->diningSessionService->closeIfNoActiveOrders($diningSession);
+            }
+        }
     }
 
     public function recalculateTotal(Order $order): Order
@@ -223,8 +256,12 @@ class OrderService
         $order->loadMissing('items');
         $sum = $order->items->sum(fn (OrderItem $item) => (float) $item->price * (int) $item->quantity);
         $this->orderRepository->update($order, ['total_amount' => round($sum, 2)]);
+        $fresh = $order->fresh(['items.menuItem', 'diningSession']);
+        if ($fresh->diningSession) {
+            $this->diningSessionService->syncTotals($fresh->diningSession);
+        }
 
-        return $order->fresh(['items.menuItem']);
+        return $fresh;
     }
 
     protected function createInvoiceForOrder(Order $order): Invoice
@@ -259,6 +296,34 @@ class OrderService
         return true;
     }
 
+    protected function resolveDiningSession(int $tableId, ?CustomerSession $customerSession): DiningSession
+    {
+        if ($customerSession) {
+            $existingLinked = DiningSession::query()
+                ->where('table_id', $tableId)
+                ->whereIn('status', [
+                    DiningSessionStatus::Open,
+                    DiningSessionStatus::InProgress,
+                    DiningSessionStatus::FoodDelivered,
+                ])
+                ->where('customer_name', 'guest-session-'.$customerSession->id)
+                ->latest('id')
+                ->first();
+            if ($existingLinked) {
+                return $existingLinked;
+            }
+
+            $session = $this->diningSessionService->getOrCreateOpenForTable($tableId);
+            if (! $session->customer_name) {
+                $session->update(['customer_name' => 'guest-session-'.$customerSession->id]);
+            }
+
+            return $session->fresh();
+        }
+
+        return $this->diningSessionService->getOrCreateOpenForTable($tableId);
+    }
+
     public function orderPanelPayload(Order $order): array
     {
         $order->loadMissing(['items.menuItem']);
@@ -270,13 +335,14 @@ class OrderService
         return [
             'id' => $order->id,
             'order_number' => $order->order_number,
+            'dining_session_id' => $order->dining_session_id,
             'status' => $order->status->value,
             'total_amount' => (string) $order->total_amount,
             'subtotal' => number_format($subtotal, 2, '.', ''),
             'tax_rate' => $taxRate,
             'tax_amount' => number_format($taxAmount, 2, '.', ''),
             'grand_total' => number_format($grandTotal, 2, '.', ''),
-            'editable' => $order->status === OrderStatus::Pending,
+            'editable' => $order->status !== OrderStatus::CheckoutDone,
             'ordered_at' => $order->ordered_at?->toIso8601String(),
             'completed_at' => $order->completed_at?->toIso8601String(),
             'checkout_at' => $order->checkout_at?->toIso8601String(),
@@ -287,10 +353,16 @@ class OrderService
                 'menu_item_id' => $item->menu_item_id,
                 'name' => $item->menuItem->name,
                 'quantity' => $item->quantity,
+                'delivered_quantity' => (int) $item->delivered_quantity,
+                'remaining_quantity' => max(0, (int) $item->quantity - (int) $item->delivered_quantity),
                 'price' => (string) $item->price,
                 'line_total' => number_format((float) $item->price * (int) $item->quantity, 2, '.', ''),
                 'notes' => $item->notes,
                 'options' => $item->options ?? [],
+                'preparation_status' => ($item->preparation_status ?? PreparationStatus::Pending)->value,
+                'is_delivered' => (bool) $item->is_delivered,
+                'delivered_at' => $item->delivered_at?->toIso8601String(),
+                'served_by' => $item->served_by,
             ])->all(),
         ];
     }
@@ -306,7 +378,7 @@ class OrderService
         return DB::transaction(function () use ($item) {
             $item = OrderItem::query()->lockForUpdate()->findOrFail($item->id);
             $order = Order::query()->lockForUpdate()->findOrFail($item->order_id);
-            $this->ensurePending($order);
+            $this->ensureOrderModifiable($order);
             $item->update(['quantity' => $item->quantity + 1]);
             $order = $this->recalculateTotal($order->fresh());
             $order->load(['table', 'items.menuItem']);
@@ -321,16 +393,19 @@ class OrderService
         return DB::transaction(function () use ($item) {
             $item = OrderItem::query()->lockForUpdate()->findOrFail($item->id);
             $order = Order::query()->lockForUpdate()->findOrFail($item->order_id);
-            $this->ensurePending($order);
+            $this->ensureOrderModifiable($order);
             if ((int) $item->quantity <= 1) {
+                abort_if((int) $item->delivered_quantity > 0, 422, 'Cannot remove an item that is already delivered.');
                 $orderId = $item->order_id;
                 $item->delete();
                 $order = $this->recalculateTotal(Order::query()->findOrFail($orderId));
             } else {
+                abort_if(((int) $item->quantity - 1) < (int) $item->delivered_quantity, 422, 'Cannot set quantity below delivered quantity.');
                 $item->update(['quantity' => $item->quantity - 1]);
                 $order = $this->recalculateTotal($order->fresh());
             }
             $order->load(['table', 'items.menuItem']);
+            $order = $this->syncOrderCompletionFromItems($order);
             rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
 
             return $order;
@@ -342,10 +417,12 @@ class OrderService
         return DB::transaction(function () use ($item) {
             $item = OrderItem::query()->lockForUpdate()->findOrFail($item->id);
             $order = Order::query()->lockForUpdate()->findOrFail($item->order_id);
-            $this->ensurePending($order);
+            $this->ensureOrderModifiable($order);
+            abort_if((int) $item->delivered_quantity > 0, 422, 'Cannot remove an item that is already delivered.');
             $item->delete();
             $order = $this->recalculateTotal($order->fresh());
             $order->load(['table', 'items.menuItem']);
+            $order = $this->syncOrderCompletionFromItems($order);
             rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
 
             return $order;
@@ -359,7 +436,7 @@ class OrderService
     {
         return DB::transaction(function () use ($order, $menuItemId, $quantity, $notes, $options) {
             $order = Order::query()->lockForUpdate()->findOrFail($order->id);
-            $this->ensurePending($order);
+            $this->ensureOrderModifiable($order);
             $menuItem = MenuItem::query()->findOrFail($menuItemId);
             OrderItem::query()->create([
                 'order_id' => $order->id,
@@ -368,9 +445,21 @@ class OrderService
                 'price' => $menuItem->price,
                 'notes' => $notes,
                 'options' => $options !== [] ? $options : null,
+                'preparation_status' => PreparationStatus::Pending,
+                'delivered_quantity' => 0,
+                'is_delivered' => false,
             ]);
+            if ($order->status === OrderStatus::Completed) {
+                $order->update([
+                    'status' => OrderStatus::Preparing,
+                    'completed_at' => null,
+                ]);
+            }
             $order = $this->recalculateTotal($order);
             $order->load(['table', 'items.menuItem']);
+            if ($order->diningSession) {
+                $this->diningSessionService->syncProgressStatus($order->diningSession);
+            }
             rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
 
             return $order;
@@ -400,6 +489,134 @@ class OrderService
 
             return $order;
         });
+    }
+
+    public function updateOrderItemPreparationStatus(OrderItem $item, PreparationStatus $status): Order
+    {
+        return DB::transaction(function () use ($item, $status) {
+            $item = OrderItem::query()->lockForUpdate()->findOrFail($item->id);
+            $order = Order::query()->lockForUpdate()->findOrFail($item->order_id);
+            $this->ensureOrderModifiable($order);
+
+            if ($item->is_delivered) {
+                abort(422, 'Delivered items cannot be changed.');
+            }
+
+            $item->preparation_status = $status;
+            if ($status === PreparationStatus::Delivered) {
+                $item->delivered_quantity = $item->quantity;
+                $item->is_delivered = true;
+                $item->delivered_at = now();
+            }
+            $item->save();
+
+            $order = $this->syncOrderCompletionFromItems($order->fresh());
+            rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
+
+            return $order->fresh(['table', 'items.menuItem']);
+        });
+    }
+
+    public function deliverOrderItem(OrderItem $item, int $quantity, ?int $servedBy): Order
+    {
+        return DB::transaction(function () use ($item, $quantity, $servedBy) {
+            $item = OrderItem::query()->lockForUpdate()->findOrFail($item->id);
+            $order = Order::query()->lockForUpdate()->findOrFail($item->order_id);
+            $this->ensureOrderModifiable($order);
+            if ($quantity < 1) {
+                abort(422, 'Delivered quantity must be at least 1.');
+            }
+
+            $nextDelivered = (int) $item->delivered_quantity + $quantity;
+            if ($nextDelivered > (int) $item->quantity) {
+                abort(422, 'Cannot deliver more than ordered quantity.');
+            }
+
+            $item->delivered_quantity = $nextDelivered;
+            $item->served_by = $servedBy;
+            $item->delivered_at = now();
+            $item->is_delivered = $nextDelivered >= (int) $item->quantity;
+            $item->preparation_status = $item->is_delivered ? PreparationStatus::Delivered : PreparationStatus::Ready;
+            $item->save();
+
+            $order = $this->syncOrderCompletionFromItems($order->fresh());
+            rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
+
+            return $order->fresh(['table', 'items.menuItem']);
+        });
+    }
+
+    public function deliverAllReadyItemsForOrder(Order $order, ?int $servedBy): Order
+    {
+        return DB::transaction(function () use ($order, $servedBy) {
+            $order = Order::query()->lockForUpdate()->findOrFail($order->id);
+            $this->ensureOrderModifiable($order);
+
+            $items = $order->items()
+                ->where('preparation_status', PreparationStatus::Ready->value)
+                ->get();
+
+            foreach ($items as $item) {
+                $remaining = max(0, (int) $item->quantity - (int) $item->delivered_quantity);
+                if ($remaining <= 0) {
+                    continue;
+                }
+                $item->delivered_quantity = (int) $item->quantity;
+                $item->is_delivered = true;
+                $item->served_by = $servedBy;
+                $item->delivered_at = now();
+                $item->preparation_status = PreparationStatus::Delivered;
+                $item->save();
+            }
+
+            $order = $this->syncOrderCompletionFromItems($order->fresh());
+            rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
+
+            return $order->fresh(['table', 'items.menuItem']);
+        });
+    }
+
+    protected function syncOrderCompletionFromItems(Order $order): Order
+    {
+        $order->loadMissing(['items', 'diningSession', 'invoice']);
+        $items = $order->items;
+        $allDelivered = $items->isNotEmpty() && $items->every(fn (OrderItem $it) => (int) $it->delivered_quantity >= (int) $it->quantity);
+
+        if ($allDelivered && $order->status !== OrderStatus::Completed) {
+            $order->update([
+                'status' => OrderStatus::Completed,
+                'completed_at' => now(),
+            ]);
+            if (! $order->invoice) {
+                $this->createInvoiceForOrder($order->fresh(['items.menuItem']));
+            }
+        } elseif (! $allDelivered && $order->status === OrderStatus::Completed) {
+            $order->update([
+                'status' => OrderStatus::Preparing,
+                'completed_at' => null,
+            ]);
+        } elseif (! $allDelivered && $order->status === OrderStatus::Pending) {
+            $order->update(['status' => OrderStatus::Preparing]);
+        }
+
+        if ($order->diningSession) {
+            $this->diningSessionService->syncProgressStatus($order->diningSession);
+        }
+
+        return $order->fresh(['items.menuItem', 'table', 'diningSession']);
+    }
+
+    protected function ensureOrderModifiable(Order $order): void
+    {
+        abort_unless($order->status !== OrderStatus::CheckoutDone, 422, 'Checked-out orders cannot be modified.');
+        if (! $order->diningSession) {
+            return;
+        }
+        abort_if(
+            in_array($order->diningSession->status, [DiningSessionStatus::Completed, DiningSessionStatus::CheckedOut], true),
+            422,
+            'Completed sessions cannot be modified.'
+        );
     }
 
     protected function ensurePending(Order $order): void

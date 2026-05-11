@@ -10,6 +10,10 @@
         data-url-panel-template="{{ url('/dashboard/floor/tables') }}/__ID__/panel"
         data-url-order-status-template="{{ url('/orders') }}/__ORDER__/status"
         data-url-orders-base="{{ url('/orders') }}"
+        data-url-item-preparing-template="{{ url('/orders') }}/__ORDER__/items/__ITEM__/mark-preparing"
+        data-url-item-ready-template="{{ url('/orders') }}/__ORDER__/items/__ITEM__/mark-ready"
+        data-url-item-deliver-template="{{ url('/orders') }}/__ORDER__/items/__ITEM__/deliver"
+        data-url-deliver-all-ready-template="{{ url('/orders') }}/__ORDER__/deliver-all-ready"
         data-url-menu-catalog="{{ route('orders.menu.catalog') }}"
     >
         <header class="relative z-30 flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-orange-950/40 bg-[#120906]/95 px-3 py-2 shadow-lg backdrop-blur sm:gap-3 sm:px-4">
@@ -21,28 +25,6 @@
                     class="rounded-full border border-orange-900/60 bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-400"
                     title="Realtime connection"
                 >Poll</span>
-            </div>
-
-            <div class="flex flex-1 flex-wrap items-center gap-2 sm:max-w-md sm:flex-initial">
-                <label class="sr-only" for="df-search">Search tables</label>
-                <input
-                    id="df-search"
-                    type="search"
-                    placeholder="Search table…"
-                    class="min-w-[8rem] flex-1 rounded-xl border border-orange-900/50 bg-black/30 px-3 py-2 text-sm text-orange-50 placeholder:text-orange-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-400 sm:w-56"
-                    autocomplete="off"
-                >
-            </div>
-
-            <div class="flex flex-wrap items-center gap-1.5">
-                <button type="button" id="df-kitchen" class="rounded-xl border border-orange-800/60 bg-orange-950/50 px-3 py-2 text-xs font-semibold text-orange-100 hover:bg-orange-900/60 sm:text-sm">Kitchen mode</button>
-                <button type="button" id="df-fullscreen" class="rounded-xl border border-orange-800/60 bg-orange-950/50 px-3 py-2 text-xs font-semibold text-orange-100 hover:bg-orange-900/60 sm:text-sm">Fullscreen</button>
-                <button type="button" id="df-zoom-in" class="rounded-lg border border-orange-800 bg-orange-950 px-2.5 py-2 text-sm text-orange-100 hover:bg-orange-900">＋</button>
-                <button type="button" id="df-zoom-out" class="rounded-lg border border-orange-800 bg-orange-950 px-2.5 py-2 text-sm text-orange-100 hover:bg-orange-900">−</button>
-                <button type="button" id="df-zoom-reset" class="rounded-lg border border-orange-800 bg-orange-950 px-2 py-2 text-xs text-orange-200 hover:bg-orange-900">100%</button>
-            </div>
-
-            <div class="relative z-40 flex flex-wrap items-center gap-1.5 border-t border-orange-950/30 pt-2 sm:border-0 sm:pt-0">
                 <div class="relative" id="df-actions-menu-wrap">
                     <button
                         type="button"
@@ -63,7 +45,7 @@
                         id="df-actions-menu-panel"
                         role="menu"
                         aria-labelledby="df-actions-menu-btn"
-                        class="absolute right-0 top-full z-50 mt-1 hidden min-w-[12.5rem] origin-top-right rounded-lg border border-orange-900/70 bg-[#1a120b] py-1 shadow-2xl shadow-black/50 ring-1 ring-orange-950/60"
+                        class="absolute left-0 top-full z-50 mt-1 hidden min-w-[12.5rem] origin-top-left rounded-lg border border-orange-900/70 bg-[#1a120b] py-1 shadow-2xl shadow-black/50 ring-1 ring-orange-950/60"
                     >
                         <a
                             href="{{ route('orders.create') }}"
@@ -89,6 +71,11 @@
                                 class="block px-3 py-1.5 text-xs text-orange-200 hover:bg-orange-950/80"
                             >Reporting · item sales matrix</a>
                             <a
+                                href="{{ route('reporting.delivery-performance') }}"
+                                role="menuitem"
+                                class="block px-3 py-1.5 text-xs text-orange-200 hover:bg-orange-950/80"
+                            >Reporting · delivery performance</a>
+                            <a
                                 href="{{ route('menu-items.index') }}"
                                 role="menuitem"
                                 class="block px-3 py-1.5 text-xs text-orange-200 hover:bg-orange-950/80"
@@ -101,6 +88,28 @@
                         @endif
                     </div>
                 </div>
+            </div>
+
+            <div class="flex flex-1 flex-wrap items-center gap-2 sm:max-w-md sm:flex-initial">
+                <label class="sr-only" for="df-search">Search tables</label>
+                <input
+                    id="df-search"
+                    type="search"
+                    placeholder="Search table…"
+                    class="min-w-[8rem] flex-1 rounded-xl border border-orange-900/50 bg-black/30 px-3 py-2 text-sm text-orange-50 placeholder:text-orange-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-400 sm:w-56"
+                    autocomplete="off"
+                >
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1.5">
+                <button type="button" id="df-kitchen" class="rounded-xl border border-orange-800/60 bg-orange-950/50 px-3 py-2 text-xs font-semibold text-orange-100 hover:bg-orange-900/60 sm:text-sm">Kitchen mode</button>
+                <button type="button" id="df-fullscreen" class="rounded-xl border border-orange-800/60 bg-orange-950/50 px-3 py-2 text-xs font-semibold text-orange-100 hover:bg-orange-900/60 sm:text-sm">Fullscreen</button>
+                <button type="button" id="df-zoom-in" class="rounded-lg border border-orange-800 bg-orange-950 px-2.5 py-2 text-sm text-orange-100 hover:bg-orange-900">＋</button>
+                <button type="button" id="df-zoom-out" class="rounded-lg border border-orange-800 bg-orange-950 px-2.5 py-2 text-sm text-orange-100 hover:bg-orange-900">−</button>
+                <button type="button" id="df-zoom-reset" class="rounded-lg border border-orange-800 bg-orange-950 px-2 py-2 text-xs text-orange-200 hover:bg-orange-900">100%</button>
+            </div>
+
+            <div class="relative z-40 flex flex-wrap items-center gap-1.5 border-t border-orange-950/30 pt-2 sm:border-0 sm:pt-0">
                 <form method="POST" action="{{ route('logout') }}" class="inline">
                     @csrf
                     <button type="submit" class="rounded-lg px-2 py-1.5 text-xs text-orange-600 hover:text-orange-300 sm:text-sm">Logout</button>
@@ -134,6 +143,11 @@
                 <div id="df-drawer-body" class="hidden flex-1 flex-col overflow-hidden">
                     <div class="flex-1 overflow-y-auto px-4 py-4">
                         <section class="mb-6">
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-orange-900">Dining session actions</p>
+                            <div id="df-session-actions" class="mt-2"></div>
+                        </section>
+
+                        <section class="mb-6">
                             <p class="text-[10px] font-semibold uppercase tracking-wider text-orange-900">Active orders</p>
                             <div id="df-active-orders" class="mt-2 space-y-3 text-sm text-orange-100"></div>
                         </section>
@@ -150,6 +164,21 @@
                     </div>
                 </div>
             </aside>
+
+            <div id="df-mobile-session-bar" class="pointer-events-none fixed bottom-0 left-0 right-0 z-30 hidden border-t border-orange-900/50 bg-[#120906]/95 p-2 lg:hidden"></div>
+        </div>
+    </div>
+
+    <div id="df-checkout-modal" class="fixed inset-0 z-[70] hidden items-end justify-center bg-black/70 p-3 sm:items-center">
+        <div class="w-full max-w-md rounded-xl border border-orange-800 bg-[#1a120b] p-4 shadow-2xl">
+            <p class="text-xs font-semibold uppercase tracking-wider text-orange-700">Confirm checkout</p>
+            <h3 class="mt-1 text-lg font-semibold text-orange-50">Checkout this dining session?</h3>
+            <p class="mt-2 text-sm text-orange-200">Are you sure you want to checkout this dining session?</p>
+            <div id="df-checkout-summary" class="mt-3 rounded-lg border border-orange-900/60 bg-black/20 p-3 text-sm text-orange-100"></div>
+            <div class="mt-4 flex flex-wrap justify-end gap-2">
+                <button type="button" id="df-checkout-cancel" class="rounded-lg border border-orange-700 px-3 py-2 text-sm text-orange-200 hover:bg-orange-950">Cancel</button>
+                <a href="#" id="df-checkout-confirm" class="rounded-lg bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-600">Confirm Checkout</a>
+            </div>
         </div>
     </div>
 @endsection

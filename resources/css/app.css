@@ -782,6 +782,16 @@
     min-height: 28px;
     min-width: 28px;
     padding: 0.15rem 0.45rem;
+    touch-action: manipulation;
+    transition:
+        transform 0.12s ease,
+        background-color 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.guest-reorder-chip:active {
+    transform: scale(0.9);
+    background-color: rgb(255 247 237);
 }
 
 .guest-tab:not(.guest-tab-active) {

@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="mb-6">
-        <a href="{{ route('orders.show', $order) }}" class="text-sm text-slate-400 hover:text-white">Back to order</a>
+        <a href="{{ route('dashboard') }}" class="text-sm text-slate-400 hover:text-white">Back to dashboard</a>
     </div>
 
     <h1 class="text-2xl font-semibold text-white">Checkout</h1>

@@ -13,6 +13,7 @@ class Order extends Model
     protected $fillable = [
         'table_id',
         'customer_session_id',
+        'dining_session_id',
         'order_number',
         'status',
         'total_amount',
@@ -42,6 +43,11 @@ class Order extends Model
     public function customerSession(): BelongsTo
     {
         return $this->belongsTo(CustomerSession::class);
+    }
+
+    public function diningSession(): BelongsTo
+    {
+        return $this->belongsTo(DiningSession::class);
     }
 
     public function items(): HasMany

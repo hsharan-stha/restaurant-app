@@ -37,14 +37,6 @@ class OrderApiController extends Controller
         return response()->json($order->load(['table', 'items.menuItem']), 201);
     }
 
-    public function show(Order $order): JsonResponse
-    {
-        $found = $this->orderRepository->find($order->id);
-        abort_unless($found, 404);
-
-        return response()->json($found);
-    }
-
     public function updateStatus(UpdateOrderStatusRequest $request, Order $order): JsonResponse
     {
         $status = OrderStatus::from($request->validated('status'));

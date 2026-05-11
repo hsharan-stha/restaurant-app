@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\DB;
 class PaymentService
 {
     public function __construct(
-        protected OrderService $orderService
+        protected OrderService $orderService,
+        protected DiningSessionService $diningSessionService,
     ) {}
 
     public function processLocalPayment(Order $order, PaymentMethod $method): Payment
@@ -48,6 +49,12 @@ class PaymentService
                 $this->orderService->transitionPaidOrderToCheckoutDone($checkoutOrder->fresh(['invoice', 'items.menuItem']));
             }
 
+            $primarySession = $orders->first()?->diningSession;
+            if ($primarySession) {
+                $this->diningSessionService->syncTotals($primarySession);
+                $this->diningSessionService->closeIfNoActiveOrders($primarySession->fresh());
+            }
+
             return $payment;
         });
     }
@@ -68,6 +75,8 @@ class PaymentService
 
         if ($order->customer_session_id) {
             $baseQuery->where('customer_session_id', $order->customer_session_id);
+        } elseif ($order->dining_session_id) {
+            $baseQuery->where('dining_session_id', $order->dining_session_id);
         } else {
             $baseQuery->whereKey($order->id);
         }

@@ -42,7 +42,13 @@ class GroupedCheckoutTest extends TestCase
             ->post(route('payments.store', $firstOrder), [
                 'method' => 'cash',
             ])
-            ->assertRedirect(route('orders.show', $firstOrder));
+            ->assertRedirect(route('bills.thermal', [
+                'order' => $firstOrder,
+                'ids' => $firstOrder->id.','.$secondOrder->id,
+                'autoprint' => 1,
+                'paper' => '80',
+                'return_to' => route('dashboard'),
+            ]));
 
         $this->assertSame(2, Payment::query()->where('status', PaymentStatus::Completed)->count());
         $this->assertTrue($firstOrder->fresh()->payments()->where('status', PaymentStatus::Completed)->exists());

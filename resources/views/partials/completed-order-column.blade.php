@@ -51,6 +51,14 @@
                                         </p>
                                     </div>
                                 </div>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    <a href="{{ route('bills.thermal', ['order' => $order, 'paper' => '80']) }}" target="_blank" rel="noopener" class="rounded border border-emerald-500/40 bg-emerald-900/20 px-2.5 py-1 text-base text-emerald-200 hover:bg-emerald-900/40">
+                                        Print Bill
+                                    </a>
+                                    <a href="{{ route('bills.thermal.pdf', ['order' => $order, 'paper' => '80']) }}" class="rounded border border-emerald-500/40 bg-transparent px-2.5 py-1 text-base text-emerald-100 hover:bg-emerald-900/20">
+                                        PDF
+                                    </a>
+                                </div>
                                 @if($order->items->isNotEmpty())
                                     <ul class="mt-3 space-y-2 border-t-2 border-emerald-400/40 pt-3 text-base text-orange-50/85">
                                         @foreach($order->items as $line)
@@ -72,6 +80,9 @@
                     @else
                         <p class="rounded-md border border-emerald-500/30 bg-emerald-950/40 px-4 py-2.5 text-xl text-emerald-200">Payment received</p>
                     @endif
+                    <a href="{{ route('bills.thermal', ['order' => $group['orders']->first(), 'ids' => $group['orders']->pluck('id')->implode(','), 'paper' => '80']) }}" target="_blank" rel="noopener" class="rounded-md border border-emerald-500/50 bg-emerald-900/20 px-4 py-2.5 text-xl text-emerald-100 hover:bg-emerald-900/40">
+                        Print Session Bill
+                    </a>
                 </div>
             </article>
         @empty

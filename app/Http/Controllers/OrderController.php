@@ -104,18 +104,11 @@ class OrderController extends Controller
                     'table_id' => $order->table_id,
                     'total_amount' => (string) $order->total_amount,
                 ],
-                'redirect_url' => route('orders.show', $order),
+                'redirect_url' => route('dashboard'),
             ]);
         }
 
-        return redirect()->route('orders.show', $order)->with('status', 'Order placed.');
-    }
-
-    public function show(Order $order): View
-    {
-        $order->load(['table', 'items.menuItem', 'invoice', 'payments']);
-
-        return view('orders.show', compact('order'));
+        return redirect()->route('dashboard')->with('status', 'Order placed.');
     }
 
     public function updateStatus(UpdateOrderStatusRequest $request, Order $order): RedirectResponse|JsonResponse

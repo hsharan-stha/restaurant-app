@@ -102,22 +102,27 @@ document.addEventListener('DOMContentLoaded', () => {
     function addQuantity(menuItemId, name, price, qty = 1, notes = '') {
         const p = parseMoney(price);
         const existing = findMerge(menuItemId, notes);
+        let pulseLineId;
         if (existing) {
             existing.quantity += qty;
+            pulseLineId = existing.lineId;
         } else {
-            lines.push({
+            const nextLine = {
                 lineId: newLineId(),
                 menu_item_id: Number(menuItemId),
                 name: String(name),
                 price: p,
                 quantity: qty,
                 notes: notes || '',
-            });
+            };
+            lines.push(nextLine);
+            pulseLineId = nextLine.lineId;
         }
         persistCart();
         render({
             interactive: true,
             pulseMenuItemId: Number(menuItemId),
+            pulseLineId,
         });
     }
 
@@ -483,13 +488,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const name = wrap.dataset.reorderName;
         const price = wrap.dataset.reorderPrice;
         if (e.target.closest('[data-reorder-decrease]')) {
+            const btn = e.target.closest('[data-reorder-decrease]');
+            restartAnimation(btn, 'guest-qty-pop');
             const simple = lines.find((l) => Number(l.menu_item_id) === Number(id) && !l.notes);
             if (simple) {
                 setQuantity(simple.lineId, simple.quantity - 1, { pulseMenuItemId: Number(id) });
             }
         }
         if (e.target.closest('[data-reorder-amount]')) {
-            const amt = Number(e.target.closest('[data-reorder-amount]')?.getAttribute('data-reorder-amount') || 1);
+            const btn = e.target.closest('[data-reorder-amount]');
+            restartAnimation(btn, 'guest-qty-pop');
+            const amt = Number(btn?.getAttribute('data-reorder-amount') || 1);
             addQuantity(id, name, price, amt, '');
         }
     });

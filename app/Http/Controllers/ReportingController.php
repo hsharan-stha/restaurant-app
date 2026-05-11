@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DiningSessionStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Models\DiningSession;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Services\MonthlyItemSalesMatrixService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -24,8 +27,6 @@ class ReportingController extends Controller
 
     public function completedOrders(Request $request): View
     {
-        $orders = $this->orderRepository->allWithRelations();
-
         $completedFilterEnd = $this->parseDate(
             $request->query('completed_to'),
             now()
@@ -39,30 +40,41 @@ class ReportingController extends Controller
             [$completedFilterStart, $completedFilterEnd] = [$completedFilterEnd, $completedFilterStart];
         }
 
-        $completedOrders = $orders
-            ->filter(fn ($o) => in_array($o->status, [
-                OrderStatus::Completed,
-                OrderStatus::CheckoutDone,
-            ], true))
-            ->filter(function (Order $order) use ($completedFilterStart, $completedFilterEnd) {
-                $anchor = $this->orderReportAnchorAt($order);
+        $completedSessions = DiningSession::query()
+            ->with(['table', 'orders.invoice', 'orders.payments'])
+            ->whereIn('status', [
+                DiningSessionStatus::Completed->value,
+                DiningSessionStatus::CheckedOut->value,
+            ])
+            ->whereBetween('closed_at', [
+                $completedFilterStart->copy()->startOfDay(),
+                $completedFilterEnd->copy()->endOfDay(),
+            ])
+            ->orderByDesc('closed_at')
+            ->get()
+            ->map(function (DiningSession $session) {
+                $paymentMethod = $session->orders
+                    ->flatMap(fn (Order $o) => $o->payments)
+                    ->first(fn ($payment) => $payment->status === PaymentStatus::Completed)
+                    ?->method
+                    ?->value;
 
-                if (! $anchor) {
-                    return false;
-                }
-
-                return $anchor->between(
-                    $completedFilterStart->copy()->startOfDay(),
-                    $completedFilterEnd->copy()->endOfDay()
-                );
+                return [
+                    'id' => $session->id,
+                    'session_code' => $session->session_code,
+                    'table_number' => $session->table?->table_number,
+                    'order_count' => $session->orders->count(),
+                    'grand_total' => (float) $session->grand_total,
+                    'payment_method' => $paymentMethod,
+                    'checkout_time' => $session->closed_at,
+                    'order_ids_csv' => $session->orders->pluck('id')->implode(','),
+                    'primary_order_id' => $session->orders->pluck('id')->first(),
+                ];
             })
             ->values();
 
-        $completedOrderGroups = $this->buildCompletedOrderGroups($completedOrders);
-
         return view('reporting.completed-orders', [
-            'completedOrderGroupsByDate' => $this->buildCompletedOrderGroupsByDate($completedOrderGroups),
-            'tableSpendSummaries' => $this->buildTableSpendSummaries($completedOrderGroups),
+            'completedSessions' => $completedSessions,
             'completedFilterFrom' => $completedFilterStart->toDateString(),
             'completedFilterTo' => $completedFilterEnd->toDateString(),
         ]);
@@ -166,6 +178,48 @@ class ReportingController extends Controller
             $report['year'],
             $report['month']
         ));
+    }
+
+    public function deliveryPerformance(Request $request): View
+    {
+        $to = $this->parseDate($request->query('to'), now());
+        $from = $this->parseDate($request->query('from'), $to->copy()->subWeek());
+        if ($from->gt($to)) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $items = OrderItem::query()
+            ->with(['menuItem', 'order'])
+            ->whereNotNull('delivered_at')
+            ->whereBetween('delivered_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+            ->get();
+
+        $rows = $items->map(function (OrderItem $item) {
+            $orderedAt = $item->order?->ordered_at ?? $item->order?->created_at;
+            $preparationMinutes = $orderedAt ? $orderedAt->diffInMinutes($item->delivered_at) : null;
+
+            return [
+                'item' => $item->menuItem?->name ?? 'Unknown',
+                'table' => $item->order?->table_id,
+                'quantity' => (int) $item->quantity,
+                'delivered_quantity' => (int) $item->delivered_quantity,
+                'prepared_minutes' => $preparationMinutes,
+                'delivered_at' => $item->delivered_at,
+                'is_delayed' => $preparationMinutes !== null && $preparationMinutes > 30,
+            ];
+        });
+
+        $avgServingMinutes = round((float) $rows->pluck('prepared_minutes')->filter()->avg(), 1);
+        $delayedCount = $rows->where('is_delayed', true)->count();
+
+        return view('reporting.delivery-performance', [
+            'rows' => $rows->sortByDesc('delivered_at')->values(),
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'avgServingMinutes' => $avgServingMinutes,
+            'delayedCount' => $delayedCount,
+            'deliveredCount' => $rows->count(),
+        ]);
     }
 
     protected function parseDate(mixed $value, Carbon $default): Carbon

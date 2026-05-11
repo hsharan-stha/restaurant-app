@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PreparationStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -14,6 +15,11 @@ class OrderItem extends Model
         'price',
         'notes',
         'options',
+        'preparation_status',
+        'delivered_quantity',
+        'delivered_at',
+        'served_by',
+        'is_delivered',
     ];
 
     protected function casts(): array
@@ -21,6 +27,10 @@ class OrderItem extends Model
         return [
             'price' => 'decimal:2',
             'options' => 'array',
+            'preparation_status' => PreparationStatus::class,
+            'delivered_quantity' => 'integer',
+            'delivered_at' => 'datetime',
+            'is_delivered' => 'boolean',
         ];
     }
 
@@ -32,5 +42,10 @@ class OrderItem extends Model
     public function menuItem(): BelongsTo
     {
         return $this->belongsTo(MenuItem::class);
+    }
+
+    public function server(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'served_by');
     }
 }

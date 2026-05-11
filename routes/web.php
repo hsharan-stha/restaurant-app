@@ -8,12 +8,13 @@ use App\Http\Controllers\CustomerOrderingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DiningTableController;
 use App\Http\Controllers\DiningTableFloorPlanController;
-use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MenuItemController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OrderItemFulfillmentController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PendingOrderItemController;
 use App\Http\Controllers\ReportingController;
+use App\Http\Controllers\ThermalBillController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('login'));
@@ -45,21 +46,25 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin,staff')->group(function () {
         Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
         Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
-        Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
         Route::post('orders/{order}/items', [PendingOrderItemController::class, 'store'])->name('orders.items.store');
         Route::post('orders/{order}/items/{orderItem}/increment', [PendingOrderItemController::class, 'increment'])->name('orders.items.increment');
         Route::post('orders/{order}/items/{orderItem}/decrement', [PendingOrderItemController::class, 'decrement'])->name('orders.items.decrement');
         Route::delete('orders/{order}/items/{orderItem}', [PendingOrderItemController::class, 'destroy'])->name('orders.items.destroy');
         Route::patch('orders/{order}/items/{orderItem}', [PendingOrderItemController::class, 'update'])->name('orders.items.update');
-        Route::get('orders/{order}/invoice', [InvoiceController::class, 'show'])->name('invoices.show');
-        Route::get('orders/{order}/invoice/pdf', [InvoiceController::class, 'pdf'])->name('invoices.pdf');
+        Route::post('orders/{order}/items/{orderItem}/mark-preparing', [OrderItemFulfillmentController::class, 'markPreparing'])->name('orders.items.mark-preparing');
+        Route::post('orders/{order}/items/{orderItem}/mark-ready', [OrderItemFulfillmentController::class, 'markReady'])->name('orders.items.mark-ready');
+        Route::post('orders/{order}/items/{orderItem}/deliver', [OrderItemFulfillmentController::class, 'deliver'])->name('orders.items.deliver');
+        Route::post('orders/{order}/deliver-all-ready', [OrderItemFulfillmentController::class, 'deliverAllReady'])->name('orders.deliver-all-ready');
         Route::get('orders/{order}/pay', [PaymentController::class, 'create'])->name('payments.create');
         Route::post('orders/{order}/pay', [PaymentController::class, 'store'])->name('payments.store');
+        Route::get('orders/{order}/bill/thermal', [ThermalBillController::class, 'show'])->name('bills.thermal');
+        Route::get('orders/{order}/bill/thermal/pdf', [ThermalBillController::class, 'pdf'])->name('bills.thermal.pdf');
     });
 
     Route::middleware('role:admin')->group(function () {
         Route::get('reporting/completed-orders', [ReportingController::class, 'completedOrders'])->name('reporting.completed-orders');
+        Route::get('reporting/delivery-performance', [ReportingController::class, 'deliveryPerformance'])->name('reporting.delivery-performance');
         Route::get('reporting/monthly-item-sales-matrix', [ReportingController::class, 'monthlyItemSalesMatrix'])->name('reporting.monthly-item-sales-matrix');
         Route::get('reporting/monthly-item-sales-matrix/export/csv', [ReportingController::class, 'monthlyItemSalesMatrixCsv'])->name('reporting.monthly-item-sales-matrix.csv');
         Route::get('reporting/monthly-item-sales-matrix/export/pdf', [ReportingController::class, 'monthlyItemSalesMatrixPdf'])->name('reporting.monthly-item-sales-matrix.pdf');
