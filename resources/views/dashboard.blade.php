@@ -169,6 +169,14 @@
         </div>
     </div>
 
+    <button
+        type="button"
+        id="df-test-sound"
+        class="fixed bottom-4 right-4 z-[65] rounded-full border border-orange-700 bg-orange-600 px-4 py-2 text-xs font-semibold text-white shadow-lg hover:bg-orange-500"
+    >
+        Test Sound
+    </button>
+
     <div id="df-checkout-modal" class="fixed inset-0 z-[70] hidden items-end justify-center bg-black/70 p-3 sm:items-center">
         <div class="w-full max-w-md rounded-xl border border-orange-800 bg-[#1a120b] p-4 shadow-2xl">
             <p class="text-xs font-semibold uppercase tracking-wider text-orange-700">Confirm checkout</p>

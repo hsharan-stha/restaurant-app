@@ -65,6 +65,130 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let speechUnlocked = window.sessionStorage.getItem(SPEECH_TAB_KEY) === '1';
     const preUnlockSpeechBuffer = [];
+    let seenState = {};
+    try {
+        seenState = JSON.parse(window.sessionStorage.getItem(ORDER_SEEN_KEY) ?? '{}') ?? {};
+    } catch {
+        seenState = {};
+    }
+    let audioUnlocked = false;
+    let audioContext = null;
+    let fallbackBeepMuted = false;
+
+    function persistSeenState() {
+        try {
+            window.sessionStorage.setItem(ORDER_SEEN_KEY, JSON.stringify(seenState));
+        } catch {
+            /* ignore */
+        }
+    }
+
+    function isAppleMobileSafari() {
+        const ua = navigator.userAgent || '';
+        const isIOS = /iPad|iPhone|iPod/.test(ua)
+            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+
+        return isIOS && isSafari;
+    }
+
+    function ensureAudioContext() {
+        if (audioContext) {
+            return audioContext;
+        }
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) {
+            return null;
+        }
+        try {
+            audioContext = new Ctx();
+        } catch {
+            audioContext = null;
+        }
+
+        return audioContext;
+    }
+
+    async function unlockAudioFromGesture() {
+        const ctx = ensureAudioContext();
+        if (!ctx) {
+            return;
+        }
+        try {
+            if (ctx.state === 'suspended') {
+                await ctx.resume();
+            }
+            const gain = ctx.createGain();
+            gain.gain.value = 0.0001;
+            gain.connect(ctx.destination);
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = 880;
+            osc.connect(gain);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.01);
+            audioUnlocked = true;
+        } catch {
+            /* ignore */
+        }
+    }
+
+    function playFallbackBeep(pattern = 'single') {
+        if (fallbackBeepMuted) {
+            return;
+        }
+        const ctx = ensureAudioContext();
+        if (!ctx || !audioUnlocked) {
+            return;
+        }
+
+        const pulses = pattern === 'urgent'
+            ? [0, 0.18]
+            : pattern === 'triple'
+                ? [0, 0.16, 0.32]
+                : [0];
+
+        try {
+            const now = ctx.currentTime;
+            pulses.forEach((offset, index) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.value = index % 2 === 0 ? 920 : 760;
+                gain.gain.setValueAtTime(0.0001, now + offset);
+                gain.gain.exponentialRampToValueAtTime(0.12, now + offset + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.14);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + offset);
+                osc.stop(now + offset + 0.16);
+            });
+        } catch {
+            fallbackBeepMuted = true;
+        }
+    }
+
+    function notifySound(text, options = {}) {
+        const immediate = options.immediate === true;
+        const beepPattern = options.beepPattern ?? (immediate ? 'urgent' : 'single');
+        const preferBeep = isAppleMobileSafari();
+
+        if (preferBeep) {
+            playFallbackBeep(beepPattern);
+        }
+
+        if (text) {
+            if (immediate) {
+                speakImmediate(text);
+            } else {
+                enqueueSpeech(text);
+            }
+        }
+
+        if (!preferBeep && options.alsoBeep === true) {
+            playFallbackBeep(beepPattern);
+        }
+    }
 
     function unlockSpeechFromGesture() {
         if (speechUnlocked) {
@@ -81,12 +205,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch {
             /* ignore */
         }
+        void unlockAudioFromGesture();
         while (preUnlockSpeechBuffer.length > 0) {
             const { text, immediate } = preUnlockSpeechBuffer.shift();
             if (immediate) {
-                speakImmediate(text);
+                notifySound(text, { immediate: true, beepPattern: 'urgent' });
             } else {
-                enqueueSpeech(text);
+                notifySound(text, { beepPattern: 'single' });
             }
         }
         reconcilePendingLoopTimer();
@@ -264,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!needsKitchen && !needsNonKitchen) {
                 return;
             }
-            enqueueSpeech(`${entry.label} has placed an order.`);
+            notifySound(`${entry.label} has placed an order.`, { beepPattern: 'single' });
         }, PENDING_REPEAT_MS);
     }
 
@@ -301,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastNonKitchenPending: pendingNonKitchen,
             });
             if (!prevKeys.has(id) && pendingFloorMergePrimed) {
-                speakImmediate(`${tblabel} has placed an order.`);
+                notifySound(`${tblabel} has placed an order.`, { immediate: true, beepPattern: 'urgent' });
             }
         }
         pendingFloorMergePrimed = true;
@@ -352,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             reconcilePendingLoopTimer();
         }
-        speakImmediate(`${tblabel} has placed an order.`);
+        notifySound(`${tblabel} has placed an order.`, { immediate: true, beepPattern: 'urgent' });
         dispatchFloorRefresh();
     }
 
@@ -364,13 +489,13 @@ document.addEventListener('DOMContentLoaded', () => {
         reconcilePendingLoopTimer();
         stopSpeechAndClearQueue();
         const tblabel = labelFromPayload(payload);
-        speakImmediate(`Preparing order for ${tblabel}.`);
+        notifySound(`Preparing order for ${tblabel}.`, { immediate: true, beepPattern: 'double', alsoBeep: true });
         dispatchFloorRefresh();
     }
 
     function onOrderCompleted(payload) {
         const tblabel = labelFromPayload(payload);
-        enqueueSpeech(`Order completed for ${tblabel}.`);
+        notifySound(`Order completed for ${tblabel}.`, { beepPattern: 'single' });
         dispatchFloorRefresh();
     }
 
@@ -379,7 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const tblabel = labelFromPayload(payload);
         if (oid != null && !playedCheckoutIds.has(oid)) {
             playedCheckoutIds.add(oid);
-            enqueueSpeech(`Checkout completed for ${tblabel}.`);
+            notifySound(`Checkout completed for ${tblabel}.`, { beepPattern: 'triple' });
         }
         dispatchFloorRefresh();
     }
@@ -395,19 +520,27 @@ document.addEventListener('DOMContentLoaded', () => {
                           ? `Table number ${n} has requested checkout`
                           : 'A guest has requested checkout.';
                   })();
-        speakImmediate(text);
+        notifySound(text, { immediate: true, beepPattern: 'urgent' });
         dispatchFloorRefresh();
     }
 
     function onOrderUpdated(payload) {
         if (payload?.voice_line) {
-            speakImmediate(payload.voice_line);
+            notifySound(payload.voice_line, { immediate: true, beepPattern: 'urgent' });
         }
         dispatchFloorRefresh();
         window.dispatchEvent(
             new CustomEvent('restaurant:order-updated', { bubbles: true, detail: payload ?? {} }),
         );
     }
+
+    window.addEventListener('restaurant:test-sound', () => {
+        notifySound('Test alert for this device.', {
+            immediate: true,
+            beepPattern: 'triple',
+            alsoBeep: true,
+        });
+    });
 
     window.addEventListener('storage', () => {
         try {
@@ -482,18 +615,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.setInterval(() => {
         void syncPendingFromApi();
     }, 12000);
-});
-    let seenState = {};
-    try {
-        seenState = JSON.parse(window.sessionStorage.getItem(ORDER_SEEN_KEY) ?? '{}') ?? {};
-    } catch {
-        seenState = {};
-    }
 
-    function persistSeenState() {
-        try {
-            window.sessionStorage.setItem(ORDER_SEEN_KEY, JSON.stringify(seenState));
-        } catch {
-            /* ignore */
-        }
-    }
+    document.getElementById('df-test-sound')?.addEventListener('click', async () => {
+        unlockSpeechFromGesture();
+        await unlockAudioFromGesture();
+        window.dispatchEvent(new CustomEvent('restaurant:test-sound', { bubbles: true }));
+    });
+});

@@ -59,8 +59,9 @@ class OrderService
 
             $staffWalkIn = $customerSession === null;
 
-            if (! $pendingOrder && ! $this->tableHasOpenGuestSession($tableId, $customerSession) && $table->status !== TableStatus::Available) {
-                if (! $staffWalkIn) {
+        
+            if (! $staffWalkIn && ! $pendingOrder && ! $this->tableHasOpenGuestSession($tableId, $customerSession)) {
+                if ($table->status !== TableStatus::Available && $table->status !== TableStatus::Occupied) {
                     throw new \InvalidArgumentException('This table is not accepting new guest orders right now.');
                 }
             }
