@@ -3,7 +3,11 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
+use App\Enums\SessionStatus;
+use App\Enums\DiningSessionStatus;
 use App\Models\Category;
+use App\Models\CustomerSession;
+use App\Models\DiningSession;
 use App\Models\DiningTable;
 use App\Models\Order;
 use App\Support\DashboardFloorVisual;
@@ -22,6 +26,22 @@ class DashboardPanelService
      */
     public function tablePanelPayload(DiningTable $diningTable, int $historyPage = 1, int $historyPerPage = 5): array
     {
+        $activeCustomerSession = CustomerSession::query()
+            ->where('table_id', $diningTable->id)
+            ->where('status', SessionStatus::Active->value)
+            ->latest('id')
+            ->first();
+
+        $activeDiningSession = DiningSession::query()
+            ->where('table_id', $diningTable->id)
+            ->whereIn('status', [
+                DiningSessionStatus::Open->value,
+                DiningSessionStatus::InProgress->value,
+                DiningSessionStatus::FoodDelivered->value,
+            ])
+            ->latest('id')
+            ->first();
+
         $orders = Order::query()
             ->where('table_id', $diningTable->id)
             ->with(['items.menuItem.category', 'customerSession', 'diningSession'])
@@ -76,6 +96,21 @@ class DashboardPanelService
                     'pending_non_kitchen' => $nonKitchenItems->where('preparation_status', \App\Enums\PreparationStatus::Pending)->count(),
                 ],
             ],
+            'active_customer_session' => $activeCustomerSession ? [
+                'id' => $activeCustomerSession->id,
+                'started_at' => $activeCustomerSession->started_at?->toIso8601String(),
+                'party_size' => $activeCustomerSession->party_size,
+            ] : null,
+            'active_dining_session' => $activeDiningSession ? [
+                'id' => $activeDiningSession->id,
+                'session_code' => $activeDiningSession->session_code,
+                'status' => $activeDiningSession->status?->value,
+                'started_at' => $activeDiningSession->started_at?->toIso8601String(),
+                'subtotal' => (string) ($activeDiningSession->subtotal ?? 0),
+                'tax' => (string) ($activeDiningSession->tax ?? 0),
+                'discount' => (string) ($activeDiningSession->discount ?? 0),
+                'grand_total' => (string) ($activeDiningSession->grand_total ?? 0),
+            ] : null,
             'visual' => DashboardFloorVisual::forTable($diningTable, $orders),
             'active_orders' => $orders
                 ->filter(fn ($o) => in_array($o->status, [

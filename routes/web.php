@@ -100,5 +100,6 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:admin,staff')->group(function () {
         Route::delete('customer-sessions/{customerSession}', [DiningTableController::class, 'destroyCustomerSession'])->name('customer-sessions.destroy');
+        Route::post('dining-tables/{diningTable}/clear-session', [DiningTableController::class, 'clearSession'])->name('dining-tables.clear-session');
     });
 });

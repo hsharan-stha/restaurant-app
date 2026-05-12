@@ -3,14 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
+use App\Enums\SessionStatus;
+use App\Enums\DiningSessionStatus;
 use App\Enums\TableStatus;
 use App\Http\Requests\StoreDiningTableRequest;
 use App\Http\Requests\UpdateDiningTableRequest;
 use App\Models\CustomerSession;
+use App\Models\DiningSession;
 use App\Models\DiningTable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -80,5 +84,76 @@ class DiningTableController extends Controller
         $customerSession->delete();
 
         return redirect()->route('dining-tables.index')->with('status', 'Customer session deleted.');
+    }
+
+    public function clearSession(Request $request, DiningTable $diningTable): JsonResponse
+    {
+        $customerSession = CustomerSession::query()
+            ->where('table_id', $diningTable->id)
+            ->where('status', SessionStatus::Active->value)
+            ->latest('id')
+            ->first();
+
+        $diningSession = DiningSession::query()
+            ->where('table_id', $diningTable->id)
+            ->whereIn('status', [
+                DiningSessionStatus::Open->value,
+                DiningSessionStatus::InProgress->value,
+                DiningSessionStatus::FoodDelivered->value,
+            ])
+            ->latest('id')
+            ->first();
+
+        if (! $customerSession && ! $diningSession) {
+            throw ValidationException::withMessages([
+                'session' => 'There is no active session to clear for this table.',
+            ]);
+        }
+
+        $hasOrders = $diningTable->orders()
+            ->where(function ($query) use ($customerSession, $diningSession) {
+                if ($customerSession) {
+                    $query->where('customer_session_id', $customerSession->id);
+                }
+
+                if ($diningSession) {
+                    $method = $customerSession ? 'orWhere' : 'where';
+                    $query->{$method}('dining_session_id', $diningSession->id);
+                }
+            })
+            ->exists();
+
+        if ($hasOrders) {
+            throw ValidationException::withMessages([
+                'session' => 'This session already has orders. Use checkout for billed visits; clear session is only for empty QR sessions.',
+            ]);
+        }
+
+        DB::transaction(function () use ($customerSession, $diningSession, $diningTable) {
+            $now = now();
+
+            if ($customerSession) {
+                $customerSession->update([
+                    'status' => SessionStatus::Completed,
+                    'closed_at' => $customerSession->closed_at ?? $now,
+                    'last_seen_at' => $now,
+                ]);
+            }
+
+            if ($diningSession) {
+                $diningSession->update([
+                    'status' => DiningSessionStatus::Cancelled,
+                    'closed_at' => $diningSession->closed_at ?? $now,
+                ]);
+            }
+
+            $diningTable->update([
+                'status' => TableStatus::Available,
+            ]);
+        });
+
+        return response()->json([
+            'message' => 'Session cleared and table marked available.',
+        ]);
     }
 }

@@ -2,9 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DiningSessionStatus;
 use App\Enums\OrderStatus;
+use App\Enums\SessionStatus;
+use App\Enums\TableStatus;
 use App\Models\Category;
 use App\Models\CustomerSession;
+use App\Models\DiningSession;
 use App\Models\DiningTable;
 use App\Models\Invoice;
 use App\Models\MenuItem;
@@ -173,5 +177,134 @@ class DashboardTest extends TestCase
         $this->assertContains($secondOrder->id, $ids);
         $response->assertJsonFragment(['total_amount' => '10.00']);
         $response->assertJsonFragment(['total_amount' => '20.00']);
+    }
+
+    public function test_dashboard_panel_includes_empty_active_sessions_without_orders(): void
+    {
+        $user = User::factory()->create();
+        $staffRole = Role::query()->create(['name' => 'staff']);
+        $user->roles()->attach($staffRole);
+
+        $table = DiningTable::query()->create([
+            'table_number' => 15,
+            'status' => TableStatus::Occupied,
+        ]);
+
+        $customerSession = CustomerSession::query()->create([
+            'table_id' => $table->id,
+            'session_token' => 'empty-session-token',
+            'party_size' => 2,
+            'started_at' => now(),
+            'last_seen_at' => now(),
+            'status' => SessionStatus::Active,
+        ]);
+
+        $diningSession = DiningSession::query()->create([
+            'table_id' => $table->id,
+            'session_code' => 'SES-EMPTY1',
+            'status' => DiningSessionStatus::Open,
+            'started_at' => now(),
+            'subtotal' => 0,
+            'tax' => 0,
+            'grand_total' => 0,
+            'payment_status' => 'pending',
+        ]);
+
+        $this->actingAs($user)
+            ->getJson(route('dashboard.floor.table.panel', $table))
+            ->assertOk()
+            ->assertJsonPath('active_customer_session.id', $customerSession->id)
+            ->assertJsonPath('active_dining_session.id', $diningSession->id)
+            ->assertJsonPath('active_dining_session.session_code', 'SES-EMPTY1');
+    }
+
+    public function test_staff_can_clear_empty_table_session(): void
+    {
+        $user = User::factory()->create();
+        $staffRole = Role::query()->create(['name' => 'staff']);
+        $user->roles()->attach($staffRole);
+
+        $table = DiningTable::query()->create([
+            'table_number' => 21,
+            'status' => TableStatus::Occupied,
+        ]);
+
+        $customerSession = CustomerSession::query()->create([
+            'table_id' => $table->id,
+            'session_token' => 'clear-empty-session-token',
+            'party_size' => 2,
+            'started_at' => now(),
+            'last_seen_at' => now(),
+            'status' => SessionStatus::Active,
+        ]);
+
+        $diningSession = DiningSession::query()->create([
+            'table_id' => $table->id,
+            'session_code' => 'SES-CLEAR1',
+            'status' => DiningSessionStatus::Open,
+            'started_at' => now(),
+            'subtotal' => 0,
+            'tax' => 0,
+            'grand_total' => 0,
+            'payment_status' => 'pending',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson(route('dining-tables.clear-session', $table))
+            ->assertOk()
+            ->assertJsonPath('message', 'Session cleared and table marked available.');
+
+        $this->assertSame(SessionStatus::Completed, $customerSession->fresh()->status);
+        $this->assertSame(DiningSessionStatus::Cancelled, $diningSession->fresh()->status);
+        $this->assertSame(TableStatus::Available, $table->fresh()->status);
+    }
+
+    public function test_staff_cannot_clear_session_once_orders_exist(): void
+    {
+        $user = User::factory()->create();
+        $staffRole = Role::query()->create(['name' => 'staff']);
+        $user->roles()->attach($staffRole);
+
+        $table = DiningTable::query()->create([
+            'table_number' => 22,
+            'status' => TableStatus::Occupied,
+        ]);
+
+        $customerSession = CustomerSession::query()->create([
+            'table_id' => $table->id,
+            'session_token' => 'clear-blocked-session-token',
+            'party_size' => 2,
+            'started_at' => now(),
+            'last_seen_at' => now(),
+            'status' => SessionStatus::Active,
+        ]);
+
+        $diningSession = DiningSession::query()->create([
+            'table_id' => $table->id,
+            'session_code' => 'SES-BLOCK1',
+            'status' => DiningSessionStatus::InProgress,
+            'started_at' => now(),
+            'subtotal' => 10,
+            'tax' => 0.8,
+            'grand_total' => 10.8,
+            'payment_status' => 'pending',
+        ]);
+
+        Order::query()->create([
+            'table_id' => $table->id,
+            'customer_session_id' => $customerSession->id,
+            'dining_session_id' => $diningSession->id,
+            'status' => OrderStatus::Pending,
+            'total_amount' => 10.00,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson(route('dining-tables.clear-session', $table))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['session']);
+
+        $this->assertSame(SessionStatus::Active, $customerSession->fresh()->status);
+        $this->assertSame(DiningSessionStatus::InProgress, $diningSession->fresh()->status);
+        $this->assertSame(TableStatus::Occupied, $table->fresh()->status);
     }
 }

@@ -889,20 +889,58 @@ document.addEventListener('DOMContentLoaded', () => {
         checkoutModal.classList.remove('flex');
     }
 
-    function buildSessionActions(panelData) {
+    function resolvePanelOpenSession(panelData) {
         const sessions = panelData.sessions ?? [];
-        if (!sessions.length) {
+        const fromOrders =
+            sessions.find((s) => (s.orders ?? []).some((o) => o.status !== 'checkout_done')) ??
+            sessions[0] ??
+            null;
+
+        if (fromOrders) {
+            return fromOrders;
+        }
+
+        const activeDiningSession = panelData.active_dining_session;
+        const activeCustomerSession = panelData.active_customer_session;
+        if (!activeDiningSession && !activeCustomerSession) {
+            return null;
+        }
+
+        return {
+            dining_session_id: activeDiningSession?.id ?? null,
+            session_code: activeDiningSession?.session_code ?? '',
+            session_status: activeDiningSession?.status ?? 'open',
+            started_at: activeDiningSession?.started_at ?? activeCustomerSession?.started_at ?? '',
+            subtotal: activeDiningSession?.subtotal ?? '0.00',
+            tax: activeDiningSession?.tax ?? '0.00',
+            discount: activeDiningSession?.discount ?? '0.00',
+            grand_total: activeDiningSession?.grand_total ?? '0.00',
+            customer_session_id: activeCustomerSession?.id ?? null,
+            orders: [],
+        };
+    }
+
+    async function clearSessionForTable(tableId) {
+        const data = await fetchJson(`/dining-tables/${tableId}/clear-session`, {
+            method: 'POST',
+        });
+
+        if (selectedId != null && Number(selectedId) === Number(tableId)) {
+            await loadPanel(selectedId);
+        }
+
+        scheduleRefresh(true);
+        return data;
+    }
+
+    function buildSessionActions(panelData) {
+        const openSession = resolvePanelOpenSession(panelData);
+        if (!openSession) {
             return '<p class="rounded-xl border border-orange-900/50 bg-black/20 px-3 py-3 text-sm text-orange-700">No dining session found.</p>';
         }
-        const openSession =
-            sessions.find((s) => (s.orders ?? []).some((o) => o.status !== 'checkout_done')) ??
-            sessions[0];
         const orders = openSession.orders ?? [];
         const sessionStatus = String(openSession.session_status ?? 'open');
         const firstOrder = orders[0];
-        if (!firstOrder) {
-            return '<p class="rounded-xl border border-orange-900/50 bg-black/20 px-3 py-3 text-sm text-orange-700">No orders in session.</p>';
-        }
         const orderIds = orders.map((o) => o.id).join(',');
         const isOpen = orders.some((o) => o.status !== 'checkout_done');
         const hasCompletedForCheckout = orders.some((o) => o.status === 'completed');
@@ -916,10 +954,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? (hasCompletedForCheckout ? 'text-orange-300 border-orange-500/40 bg-orange-950/25' : 'text-emerald-300 border-emerald-500/40 bg-emerald-950/25')
                 : 'text-slate-300 border-slate-600/40 bg-slate-900/30');
         const checkoutUrl = checkoutTarget ? `/orders/${checkoutTarget.id}/pay` : '';
-        const billPreviewUrl = `/orders/${firstOrder.id}/bill/thermal?ids=${encodeURIComponent(orderIds)}&paper=80`;
+        const billPreviewUrl = firstOrder ? `/orders/${firstOrder.id}/bill/thermal?ids=${encodeURIComponent(orderIds)}&paper=80` : '';
         const checkoutBtn = isOpen && hasCompletedForCheckout
             ? `<button type="button" data-df-session-checkout="${checkoutUrl}" data-df-session-code="${escapeHtml(openSession.session_code ?? '')}" data-df-session-orders="${orders.length}" data-df-session-total="${escapeHtml(String(runningTotal))}" class="w-full rounded-xl bg-rose-700 px-3 py-2.5 text-sm font-semibold text-white hover:bg-rose-600">Checkout Session</button>`
             : `<button type="button" disabled class="w-full cursor-not-allowed rounded-xl border border-slate-700 bg-slate-900/50 px-3 py-2.5 text-sm font-semibold text-slate-500">Checkout Session</button>`;
+        const canClearSession = !orders.length && (openSession.customer_session_id || openSession.dining_session_id);
+        const clearBtn = canClearSession
+            ? `<button type="button" data-df-clear-session data-table-id="${panelData.table?.id}" class="w-full rounded-xl border border-amber-700 bg-amber-950/40 px-3 py-2.5 text-sm font-semibold text-amber-100 hover:bg-amber-900/60">Clear Session</button>`
+            : `<button type="button" disabled class="w-full cursor-not-allowed rounded-xl border border-slate-700 bg-slate-900/50 px-3 py-2.5 text-sm font-semibold text-slate-500">Clear Session</button>`;
+        const helperText = orders.length
+            ? '<p class="mt-2 text-[11px] text-orange-700">Clear Session is only available when a guest opened the table but no order was placed.</p>'
+            : '<p class="mt-2 text-[11px] text-orange-700">Use this when a guest scanned the QR and left without placing an order.</p>';
 
         return `
             <div class="sticky top-0 rounded-xl border ${sessionStateClass} p-3">
@@ -937,9 +982,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="mt-3 grid grid-cols-1 gap-2 text-xs">
                     ${pendingKitchen > 0 ? `<button type="button" data-df-mark-seen="kitchen" data-table-id="${panelData.table?.id}" class="rounded-lg border border-orange-700 px-2 py-2 text-center text-orange-100 hover:bg-orange-950">Mark Kitchen Seen</button>` : ''}
                     ${pendingNonKitchen > 0 ? `<button type="button" data-df-mark-seen="non_kitchen" data-table-id="${panelData.table?.id}" class="rounded-lg border border-orange-700 px-2 py-2 text-center text-orange-100 hover:bg-orange-950">Mark Non-Kitchen Seen</button>` : ''}
-                    <a href="${billPreviewUrl}" target="_blank" rel="noopener" class="rounded-lg border border-orange-700 px-2 py-2 text-center text-orange-100 hover:bg-orange-950">Print Bill Preview</a>
+                    ${billPreviewUrl ? `<a href="${billPreviewUrl}" target="_blank" rel="noopener" class="rounded-lg border border-orange-700 px-2 py-2 text-center text-orange-100 hover:bg-orange-950">Print Bill Preview</a>` : ''}
                 </div>
-                <div class="mt-3">${checkoutBtn}</div>
+                <div class="mt-3 grid grid-cols-1 gap-2">${checkoutBtn}${clearBtn}</div>
+                ${helperText}
             </div>`;
     }
 
@@ -962,10 +1008,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (sessionActionsEl) {
             sessionActionsEl.innerHTML = buildSessionActions(data);
-            const sessions = data.sessions ?? [];
-            const openSession =
-                sessions.find((s) => (s.orders ?? []).some((o) => o.status !== 'checkout_done')) ??
-                sessions[0];
+            const openSession = resolvePanelOpenSession(data);
             if (openSession) {
                 const runningTotalCard = Array.from(sessionActionsEl.querySelectorAll('div')).find((el) => {
                     const text = (el.textContent ?? '').toLowerCase();
@@ -998,8 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (mobileSessionBar) {
-            const sessions = data.sessions ?? [];
-            const openSession = sessions.find((s) => (s.orders ?? []).some((o) => o.status !== 'checkout_done'));
+            const openSession = resolvePanelOpenSession(data);
             const orders = openSession?.orders ?? [];
             const checkoutTarget = orders.find((o) => o.status === 'completed');
             if (openSession && checkoutTarget) {
@@ -1264,7 +1306,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadPanel(selectedId).catch(() => {});
         }
     });
-    sessionActionsEl?.addEventListener('click', (e) => {
+        sessionActionsEl?.addEventListener('click', (e) => {
         const seenBtn = e.target.closest('[data-df-mark-seen]');
         if (seenBtn) {
             const side = seenBtn.getAttribute('data-df-mark-seen');
@@ -1274,6 +1316,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 seenBtn.setAttribute('disabled', 'disabled');
                 seenBtn.classList.add('opacity-40', 'pointer-events-none');
             }
+            return;
+        }
+        const clearBtn = e.target.closest('[data-df-clear-session]');
+        if (clearBtn) {
+            const tableId = clearBtn.getAttribute('data-table-id');
+            if (!tableId) return;
+            const ok = window.confirm('Clear this empty customer session and make the table available?');
+            if (!ok) return;
+            clearBtn.setAttribute('disabled', 'disabled');
+            clearBtn.classList.add('opacity-50', 'pointer-events-none');
+            clearSessionForTable(tableId).catch((err) => {
+                window.alert(err?.message ?? 'Failed to clear session.');
+                clearBtn.removeAttribute('disabled');
+                clearBtn.classList.remove('opacity-50', 'pointer-events-none');
+            });
             return;
         }
         const btn = e.target.closest('[data-df-session-checkout]');

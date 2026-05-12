@@ -66,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const actionClose = document.getElementById('dashboard-action-close');
     const actionPanel = document.getElementById('dashboard-action-panel');
     const actionBackdrop = document.getElementById('dashboard-action-backdrop');
+    const shouldRunDashboardPolling = Boolean(root || voiceButton || actionToggle || actionPanel);
     let speechQueue = [];
     let speakingNow = false;
     let refreshScheduled = false;
@@ -414,6 +415,10 @@ document.addEventListener('DOMContentLoaded', () => {
         window.speechSynthesis.onvoiceschanged = () => {
             preferredVoice = pickPreferredVoice();
         };
+    }
+
+    if (!shouldRunDashboardPolling) {
+        return;
     }
 
     updateLastSeenFromDom();
