@@ -11,6 +11,7 @@ class Category extends Model
         'name',
         'sort_order',
         'is_active',
+        'is_kitchen',
         'icon',
     ];
 
@@ -18,6 +19,7 @@ class Category extends Model
     {
         return [
             'is_active' => 'boolean',
+            'is_kitchen' => 'boolean',
             'sort_order' => 'integer',
         ];
     }

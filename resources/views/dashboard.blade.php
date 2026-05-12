@@ -124,7 +124,7 @@
 
             <aside
                 id="df-drawer"
-                class="fixed bottom-0 right-0 top-[var(--df-toolbar-h,120px)] z-50 flex w-full max-w-[420px] translate-x-full flex-col border-l border-orange-900/60 bg-[#120906] shadow-2xl transition-transform duration-300 ease-out"
+                class="fixed bottom-0 right-0 top-[var(--df-toolbar-h,120px)] z-50 flex w-full max-w-[760px] translate-x-full flex-col border-l border-orange-900/60 bg-[#120906] shadow-2xl transition-transform duration-300 ease-out"
                 aria-hidden="true"
             >
                 <div class="flex items-start justify-between gap-3 border-b border-orange-950/50 px-4 py-4">

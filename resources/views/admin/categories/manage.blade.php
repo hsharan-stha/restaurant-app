@@ -52,6 +52,7 @@
                                 <th class="px-2 py-1.5">Name</th>
                                 <th class="w-16 px-1 py-1.5 text-right">Items</th>
                                 <th class="w-20 px-1 py-1.5">Status</th>
+                                <th class="w-20 px-1 py-1.5">Kitchen</th>
                                 <th class="w-14 px-1 py-1.5 text-right">Sort</th>
                                 <th class="w-28 px-1 py-1.5 text-right">Actions</th>
                             </tr>
@@ -84,6 +85,10 @@
                                 <span class="text-xs text-slate-300">Active</span>
                             </label>
                         </div>
+                        <label class="flex cursor-pointer items-center gap-2 pb-1">
+                            <input name="is_kitchen" type="checkbox" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-950 text-orange-600">
+                            <span class="text-xs text-slate-300">Kitchen category</span>
+                        </label>
                         <label class="block">
                             <span class="mb-0.5 block text-[10px] font-medium uppercase tracking-wide text-slate-500">Icon (emoji or short code)</span>
                             <input name="icon" maxlength="64" class="catalog-input w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-white" placeholder="🍜">

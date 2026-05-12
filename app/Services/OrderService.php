@@ -354,7 +354,7 @@ class OrderService
 
     public function orderPanelPayload(Order $order): array
     {
-        $order->loadMissing(['items.menuItem']);
+        $order->loadMissing(['items.menuItem.category']);
         $taxRate = (float) config('restaurant.tax_rate', 0);
         $subtotal = (float) $order->total_amount;
         $taxAmount = round($subtotal * $taxRate, 2);
@@ -380,6 +380,7 @@ class OrderService
                 'id' => $item->id,
                 'menu_item_id' => $item->menu_item_id,
                 'name' => $item->menuItem->name,
+                'is_kitchen' => (bool) ($item->menuItem->category?->is_kitchen ?? false),
                 'quantity' => $item->quantity,
                 'delivered_quantity' => (int) $item->delivered_quantity,
                 'remaining_quantity' => max(0, (int) $item->quantity - (int) $item->delivered_quantity),

@@ -29,6 +29,9 @@ class CategoryController extends Controller
         if (! array_key_exists('is_active', $data)) {
             $data['is_active'] = $request->boolean('is_active', true);
         }
+        if (! array_key_exists('is_kitchen', $data)) {
+            $data['is_kitchen'] = $request->boolean('is_kitchen', false);
+        }
 
         Category::query()->create($data);
 
@@ -42,7 +45,12 @@ class CategoryController extends Controller
 
     public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
     {
-        $category->update($request->validated());
+        $data = $request->validated();
+        if (! array_key_exists('is_kitchen', $data)) {
+            $data['is_kitchen'] = $request->boolean('is_kitchen', false);
+        }
+
+        $category->update($data);
 
         return redirect()->route('categories.index')->with('status', 'Category updated.');
     }

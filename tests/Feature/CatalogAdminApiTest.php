@@ -35,6 +35,38 @@ class CatalogAdminApiTest extends TestCase
         $this->assertFalse($cat->fresh()->is_active);
     }
 
+    public function test_admin_can_create_and_update_category_with_kitchen_flag(): void
+    {
+        $admin = $this->admin();
+
+        $createResponse = $this->actingAs($admin)
+            ->postJson(route('admin.catalog.categories.store'), [
+                'name' => 'Kitchen Pass',
+                'sort_order' => 2,
+                'is_active' => true,
+                'is_kitchen' => true,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('category.is_kitchen', true);
+
+        $categoryId = (int) $createResponse->json('category.id');
+        $category = Category::query()->findOrFail($categoryId);
+
+        $this->assertTrue((bool) $category->is_kitchen);
+
+        $this->actingAs($admin)
+            ->patchJson(route('admin.catalog.categories.update', $category), [
+                'name' => 'Front Desk',
+                'sort_order' => 3,
+                'is_active' => true,
+                'is_kitchen' => false,
+            ])
+            ->assertOk()
+            ->assertJsonPath('category.is_kitchen', false);
+
+        $this->assertFalse((bool) $category->fresh()->is_kitchen);
+    }
+
     public function test_admin_inline_updates_menu_item_price(): void
     {
         $table = DiningTable::query()->create(['table_number' => 1, 'status' => 'available']);

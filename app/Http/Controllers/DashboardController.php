@@ -43,7 +43,7 @@ class DashboardController extends Controller
 
         $orders = Order::query()
             ->select(['id', 'table_id', 'status'])
-            ->with(['items:id,order_id,preparation_status'])
+            ->with(['items:id,order_id,menu_item_id,preparation_status', 'items.menuItem:id,category_id', 'items.menuItem.category:id,is_kitchen'])
             ->whereIn('table_id', $tableIds)
             ->orderByDesc('id')
             ->get()
@@ -63,8 +63,9 @@ class DashboardController extends Controller
             $forTable = $orders->get($table->id, collect());
             $visual = DashboardFloorVisual::forTable($table, $forTable);
             $activeForCounts = $forTable->filter(fn ($o) => $o->status !== OrderStatus::CheckoutDone);
-            $activeItems = $activeForCounts
-                ->flatMap(fn (Order $order) => $order->items);
+            $activeItems = $activeForCounts->flatMap(fn (Order $order) => $order->items);
+            $kitchenItems = $activeItems->filter(fn ($item) => (bool) ($item->menuItem?->category?->is_kitchen ?? false));
+            $nonKitchenItems = $activeItems->reject(fn ($item) => (bool) ($item->menuItem?->category?->is_kitchen ?? false));
             $openSession = $openDiningSessionsByTable->get($table->id);
             $hasCompletedAwaitingCheckout = $forTable->contains(fn ($o) => $o->status === OrderStatus::Completed);
             $allPaid = $forTable->isNotEmpty() && $forTable->every(fn ($o) => $o->status === OrderStatus::CheckoutDone);
@@ -96,6 +97,8 @@ class DashboardController extends Controller
                 'visual' => $visual,
                 'counts' => [
                     'pending' => $activeItems->where('preparation_status', PreparationStatus::Pending)->count(),
+                    'pending_kitchen' => $kitchenItems->where('preparation_status', PreparationStatus::Pending)->count(),
+                    'pending_non_kitchen' => $nonKitchenItems->where('preparation_status', PreparationStatus::Pending)->count(),
                     'preparing' => $activeItems->where('preparation_status', PreparationStatus::Preparing)->count(),
                     'ready' => $activeItems->where('preparation_status', PreparationStatus::Ready)->count(),
                     'delivered' => $activeItems->where('preparation_status', PreparationStatus::Delivered)->count(),

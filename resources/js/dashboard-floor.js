@@ -17,6 +17,7 @@ const KITCHEN_MODE_KEY = 'restaurant-dashboard-kitchen-mode';
 /** Debounce for batched canvas refreshes (ms). Critical order events bypass this. */
 const REFRESH_DEBOUNCE_MS = 40;
 const SESSION_HISTORY_PAGE_SIZE = 5;
+const ORDER_SEEN_KEY = 'restaurant-dashboard-order-seen-v1';
 
 function tableDisplayLabel(tableName, tableNumber) {
     const n = (tableName ?? '').trim();
@@ -206,6 +207,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkoutSummary = document.getElementById('df-checkout-summary');
     const checkoutCancel = document.getElementById('df-checkout-cancel');
     const checkoutConfirm = document.getElementById('df-checkout-confirm');
+    let orderSeenState = {};
+    try {
+        orderSeenState = JSON.parse(window.sessionStorage.getItem(ORDER_SEEN_KEY) ?? '{}') ?? {};
+    } catch {
+        orderSeenState = {};
+    }
+
+    function persistOrderSeenState() {
+        try {
+            window.sessionStorage.setItem(ORDER_SEEN_KEY, JSON.stringify(orderSeenState));
+        } catch {
+            /* ignore */
+        }
+    }
+
+    function markTableSideSeen(tableId, side) {
+        const key = String(tableId);
+        orderSeenState[key] = orderSeenState[key] ?? {};
+        orderSeenState[key][side] = true;
+        persistOrderSeenState();
+        window.dispatchEvent(new CustomEvent('restaurant:order-side-seen', { detail: { tableId: Number(tableId), side } }));
+    }
 
     /** Menu catalog from last table panel load (for add-item dropdown). */
     let panelMenuCatalog = null;
@@ -559,7 +582,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>`;
         }
 
-        const lines = (order.items ?? []).map((it) => renderLineItem(order, it, editable, { history: historyMode })).join('');
+        const kitchenItems = (order.items ?? []).filter((it) => it.is_kitchen === true);
+        const nonKitchenItems = (order.items ?? []).filter((it) => it.is_kitchen !== true);
+        const renderItemGroup = (title, items) => items.length
+            ? `<div class="min-w-0 space-y-3 rounded-xl border border-orange-900/35 bg-black/15 p-3">
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-orange-700">${title}</p>
+                    ${(items ?? []).map((it) => renderLineItem(order, it, editable, { history: historyMode })).join('')}
+               </div>`
+            : '';
+        const lines = [
+            renderItemGroup('Kitchen Items', kitchenItems),
+            renderItemGroup('Non Kitchen Items', nonKitchenItems),
+        ].filter(Boolean).join('');
+        const linesLayout = lines
+            ? `<div class="grid grid-cols-1 gap-3 xl:grid-cols-2">${lines}</div>`
+            : '';
         const readyCount = (order.items ?? []).filter((it) => String(it.preparation_status) === 'ready' && Number(it.remaining_quantity ?? 0) > 0).length;
 
         const totals = `
@@ -579,7 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="font-mono text-xs text-orange-600">${order.order_number ? `Order ${escapeHtml(String(order.order_number))}` : `#${order.id}`}</span>
                     <span class="rounded-full bg-orange-950 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-200">${escapeHtml(order.status)}</span>
                 </div>
-                <div class="mt-3 space-y-3">${lines}</div>
+                <div class="mt-3">${linesLayout}</div>
                 ${totals}
                 ${deliverAllBlock}
                 ${addBlock}
@@ -871,6 +908,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const hasCompletedForCheckout = orders.some((o) => o.status === 'completed');
         const checkoutTarget = orders.find((o) => o.status === 'completed');
         const runningTotal = openSession.grand_total ?? orders.reduce((sum, o) => sum + Number(o.grand_total ?? o.total_amount ?? 0), 0).toFixed(2);
+        const pendingKitchen = Number(panelData.table?.counts?.pending_kitchen ?? 0);
+        const pendingNonKitchen = Number(panelData.table?.counts?.pending_non_kitchen ?? 0);
         const sessionStateClass = sessionStatus === 'food_delivered'
             ? 'text-emerald-300 border-emerald-500/40 bg-emerald-950/25'
             : (isOpen
@@ -896,6 +935,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p class="text-lg font-bold text-amber-200">¥${escapeHtml(String(runningTotal))}</p>
                 </div>
                 <div class="mt-3 grid grid-cols-1 gap-2 text-xs">
+                    ${pendingKitchen > 0 ? `<button type="button" data-df-mark-seen="kitchen" data-table-id="${panelData.table?.id}" class="rounded-lg border border-orange-700 px-2 py-2 text-center text-orange-100 hover:bg-orange-950">Mark Kitchen Seen</button>` : ''}
+                    ${pendingNonKitchen > 0 ? `<button type="button" data-df-mark-seen="non_kitchen" data-table-id="${panelData.table?.id}" class="rounded-lg border border-orange-700 px-2 py-2 text-center text-orange-100 hover:bg-orange-950">Mark Non-Kitchen Seen</button>` : ''}
                     <a href="${billPreviewUrl}" target="_blank" rel="noopener" class="rounded-lg border border-orange-700 px-2 py-2 text-center text-orange-100 hover:bg-orange-950">Print Bill Preview</a>
                 </div>
                 <div class="mt-3">${checkoutBtn}</div>
@@ -1224,6 +1265,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     sessionActionsEl?.addEventListener('click', (e) => {
+        const seenBtn = e.target.closest('[data-df-mark-seen]');
+        if (seenBtn) {
+            const side = seenBtn.getAttribute('data-df-mark-seen');
+            const tableId = seenBtn.getAttribute('data-table-id');
+            if (side && tableId) {
+                markTableSideSeen(tableId, side);
+                seenBtn.setAttribute('disabled', 'disabled');
+                seenBtn.classList.add('opacity-40', 'pointer-events-none');
+            }
+            return;
+        }
         const btn = e.target.closest('[data-df-session-checkout]');
         if (!btn) return;
         const url = btn.getAttribute('data-df-session-checkout');

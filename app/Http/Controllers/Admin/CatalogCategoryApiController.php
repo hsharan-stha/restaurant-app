@@ -30,11 +30,14 @@ class CatalogCategoryApiController extends Controller
 
     public function store(StoreCategoryRequest $request): JsonResponse
     {
-        /** @var array{name: string, sort_order?: int, is_active?: bool, icon?: string|null} $data */
+        /** @var array{name: string, sort_order?: int, is_active?: bool, is_kitchen?: bool, icon?: string|null} $data */
         $data = $request->validated();
         $data['sort_order'] = $data['sort_order'] ?? 0;
         if (! array_key_exists('is_active', $data)) {
             $data['is_active'] = true;
+        }
+        if (! array_key_exists('is_kitchen', $data)) {
+            $data['is_kitchen'] = false;
         }
 
         $category = Category::query()->create($data);
@@ -47,7 +50,12 @@ class CatalogCategoryApiController extends Controller
 
     public function update(UpdateCategoryRequest $request, Category $category): JsonResponse
     {
-        $category->update($request->validated());
+        $data = $request->validated();
+        if (! array_key_exists('is_kitchen', $data)) {
+            $data['is_kitchen'] = false;
+        }
+
+        $category->update($data);
 
         return response()->json([
             'message' => __('Category updated.'),
@@ -88,6 +96,7 @@ class CatalogCategoryApiController extends Controller
             'name' => $category->name,
             'sort_order' => $category->sort_order,
             'is_active' => $category->is_active,
+            'is_kitchen' => $category->is_kitchen,
             'icon' => $category->icon,
             'menu_items_count' => (int) ($category->menu_items_count ?? $category->menuItems()->count()),
         ];

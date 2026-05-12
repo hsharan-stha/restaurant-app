@@ -87,6 +87,11 @@ function initCategories(root) {
             /** @type HTMLInputElement */
             (active).checked = true;
         }
+        const kitchen = f.querySelector('input[name="is_kitchen"]');
+        if (kitchen) {
+            /** @type HTMLInputElement */
+            (kitchen).checked = false;
+        }
         selectedId = null;
         if (panelTitle) {
             panelTitle.textContent = isNew ? 'New category' : 'Edit category';
@@ -132,12 +137,16 @@ function initCategories(root) {
             const status = c.is_active
                 ? `<span class="text-emerald-400">On</span>`
                 : `<span class="text-slate-500">Off</span>`;
+            const kitchen = c.is_kitchen
+                ? `<span class="text-orange-400">Yes</span>`
+                : `<span class="text-slate-500">No</span>`;
             tr.innerHTML = `
                 <td class="px-2 py-1">
                     <span class="font-medium text-slate-100">${escapeHtml(c.icon ? `${c.icon} ` : '')}${escapeHtml(c.name)}</span>
                 </td>
                 <td class="px-1 py-1 text-right tabular-nums text-slate-400">${c.menu_items_count}</td>
                 <td class="px-1 py-1 text-xs">${status}</td>
+                <td class="px-1 py-1 text-xs">${kitchen}</td>
                 <td class="px-1 py-1 text-right text-slate-400">${c.sort_order}</td>
                 <td class="space-x-1 px-1 py-1 text-right text-[10px]">
                     <button type="button" data-act="edit" class="text-amber-400 hover:underline">Edit</button>
@@ -164,6 +173,7 @@ function initCategories(root) {
         f.name.value = c.name;
         f.sort_order.value = String(c.sort_order);
         f.is_active.checked = !!c.is_active;
+        f.is_kitchen.checked = !!c.is_kitchen;
         f.icon.value = c.icon ?? '';
         if (panelTitle) {
             panelTitle.textContent = 'Edit category';
@@ -237,7 +247,9 @@ function initCategories(root) {
             }
             const fd = new FormData(form);
             const cb = /** @type HTMLInputElement|null */ (form.querySelector('input[name="is_active"]'));
+            const kitchenCb = /** @type HTMLInputElement|null */ (form.querySelector('input[name="is_kitchen"]'));
             fd.set('is_active', cb?.checked ? '1' : '0');
+            fd.set('is_kitchen', kitchenCb?.checked ? '1' : '0');
             const id = fd.get('id')?.toString() ?? '';
             try {
                 if (id) {

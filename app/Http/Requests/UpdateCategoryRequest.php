@@ -20,6 +20,7 @@ class UpdateCategoryRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'sort_order' => ['sometimes', 'integer', 'min:0', 'max:65535'],
             'is_active' => ['sometimes', 'boolean'],
+            'is_kitchen' => ['sometimes', 'boolean'],
             'icon' => ['nullable', 'string', 'max:64'],
         ];
     }

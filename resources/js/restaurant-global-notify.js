@@ -8,6 +8,7 @@ import Pusher from 'pusher-js';
 
 const SPEECH_TAB_KEY = 'restaurant-speech-unlocked';
 const PENDING_REPEAT_MS = 4000;
+const ORDER_SEEN_KEY = 'restaurant-dashboard-order-seen-v1';
 
 function meta(name) {
     return document.querySelector(`meta[name="${name}"]`)?.getAttribute('content') ?? '';
@@ -98,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const speechQueue = [];
     let speechSpeaking = false;
 
-    /** @type {Map<number, { label: string }>} */
+    /** @type {Map<number, { label: string, pendingKitchen: number, pendingNonKitchen: number, lastKitchenPending: number, lastNonKitchenPending: number }>} */
     const pendingAnnounceTables = new Map();
     let pendingVoiceRoundRobin = 0;
     let pendingLoopTimerId = null;
@@ -257,6 +258,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!entry?.label) {
                 return;
             }
+            const tableSeen = seenState[String(tid)] ?? {};
+            const needsKitchen = entry.pendingKitchen > 0 && tableSeen.kitchen !== true;
+            const needsNonKitchen = entry.pendingNonKitchen > 0 && tableSeen.non_kitchen !== true;
+            if (!needsKitchen && !needsNonKitchen) {
+                return;
+            }
             enqueueSpeech(`${entry.label} has placed an order.`);
         }, PENDING_REPEAT_MS);
     }
@@ -275,7 +282,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = Number(t.id);
             serverPendingIds.add(id);
             const tblabel = tableDisplayLabel(t.table_name, t.table_number);
-            pendingAnnounceTables.set(id, { label: tblabel });
+            const pendingKitchen = Number(t.counts?.pending_kitchen ?? 0);
+            const pendingNonKitchen = Number(t.counts?.pending_non_kitchen ?? 0);
+            const prev = pendingAnnounceTables.get(id);
+            const tableSeen = seenState[String(id)] ?? {};
+            if (pendingKitchen > (prev?.lastKitchenPending ?? 0)) {
+                tableSeen.kitchen = false;
+            }
+            if (pendingNonKitchen > (prev?.lastNonKitchenPending ?? 0)) {
+                tableSeen.non_kitchen = false;
+            }
+            seenState[String(id)] = tableSeen;
+            pendingAnnounceTables.set(id, {
+                label: tblabel,
+                pendingKitchen,
+                pendingNonKitchen,
+                lastKitchenPending: pendingKitchen,
+                lastNonKitchenPending: pendingNonKitchen,
+            });
             if (!prevKeys.has(id) && pendingFloorMergePrimed) {
                 speakImmediate(`${tblabel} has placed an order.`);
             }
@@ -286,6 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pendingAnnounceTables.delete(id);
             }
         });
+        persistSeenState();
         reconcilePendingLoopTimer();
     }
 
@@ -318,7 +343,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const tid = Number(payload?.table_id);
         const tblabel = labelFromPayload(payload);
         if (Number.isFinite(tid)) {
-            pendingAnnounceTables.set(tid, { label: tblabel });
+            pendingAnnounceTables.set(tid, {
+                label: tblabel,
+                pendingKitchen: 1,
+                pendingNonKitchen: 1,
+                lastKitchenPending: 1,
+                lastNonKitchenPending: 1,
+            });
             reconcilePendingLoopTimer();
         }
         speakImmediate(`${tblabel} has placed an order.`);
@@ -378,6 +409,26 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     }
 
+    window.addEventListener('storage', () => {
+        try {
+            seenState = JSON.parse(window.sessionStorage.getItem(ORDER_SEEN_KEY) ?? '{}') ?? {};
+        } catch {
+            /* ignore */
+        }
+    });
+
+    window.addEventListener('restaurant:order-side-seen', (e) => {
+        const tableId = Number(e.detail?.tableId);
+        const side = e.detail?.side;
+        if (!Number.isFinite(tableId) || (side !== 'kitchen' && side !== 'non_kitchen')) {
+            return;
+        }
+        seenState[String(tableId)] = seenState[String(tableId)] ?? {};
+        seenState[String(tableId)][side] = true;
+        persistSeenState();
+        reconcilePendingLoopTimer();
+    });
+
     if (broadcastDriver === 'reverb' && reverbKey) {
         setWsStatusBadge('connecting');
         window.Pusher = Pusher;
@@ -432,3 +483,17 @@ document.addEventListener('DOMContentLoaded', () => {
         void syncPendingFromApi();
     }, 12000);
 });
+    let seenState = {};
+    try {
+        seenState = JSON.parse(window.sessionStorage.getItem(ORDER_SEEN_KEY) ?? '{}') ?? {};
+    } catch {
+        seenState = {};
+    }
+
+    function persistSeenState() {
+        try {
+            window.sessionStorage.setItem(ORDER_SEEN_KEY, JSON.stringify(seenState));
+        } catch {
+            /* ignore */
+        }
+    }

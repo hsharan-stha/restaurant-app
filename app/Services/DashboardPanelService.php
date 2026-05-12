@@ -24,11 +24,20 @@ class DashboardPanelService
     {
         $orders = Order::query()
             ->where('table_id', $diningTable->id)
-            ->with(['items.menuItem', 'customerSession', 'diningSession'])
+            ->with(['items.menuItem.category', 'customerSession', 'diningSession'])
             ->orderByDesc('id')
             ->get();
 
         $sessions = $orders->groupBy(fn ($o) => $o->dining_session_id ?: $o->customer_session_id ?: 'single-'.$o->id);
+        $activeItems = $orders
+            ->filter(fn (Order $order) => in_array($order->status, [
+                OrderStatus::Pending,
+                OrderStatus::Preparing,
+                OrderStatus::Completed,
+            ], true))
+            ->flatMap(fn (Order $order) => $order->items);
+        $kitchenItems = $activeItems->filter(fn ($item) => (bool) ($item->menuItem?->category?->is_kitchen ?? false));
+        $nonKitchenItems = $activeItems->reject(fn ($item) => (bool) ($item->menuItem?->category?->is_kitchen ?? false));
         $serializeSession = fn (Collection $group) => [
             'dining_session_id' => $group->first()?->dining_session_id,
             'session_code' => $group->first()?->diningSession?->session_code,
@@ -62,6 +71,10 @@ class DashboardPanelService
                 'table_number' => $diningTable->table_number,
                 'status' => $diningTable->status->value,
                 'seat_capacity' => $diningTable->seat_capacity,
+                'counts' => [
+                    'pending_kitchen' => $kitchenItems->where('preparation_status', \App\Enums\PreparationStatus::Pending)->count(),
+                    'pending_non_kitchen' => $nonKitchenItems->where('preparation_status', \App\Enums\PreparationStatus::Pending)->count(),
+                ],
             ],
             'visual' => DashboardFloorVisual::forTable($diningTable, $orders),
             'active_orders' => $orders
