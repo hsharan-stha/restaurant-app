@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\DiningSessionStatus;
 use App\Enums\OrderStatus;
 use App\Enums\SessionStatus;
-use App\Models\Category;
 use App\Models\CustomerSession;
 use App\Models\DiningSession;
 use App\Models\DiningTable;
@@ -13,18 +12,17 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Enums\PreparationStatus;
 use App\Repositories\Contracts\OrderRepositoryInterface;
-use App\Services\OrderService;
+use App\Services\DashboardPanelService;
 use App\Support\DashboardFloorVisual;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
     public function __construct(
         protected OrderRepositoryInterface $orderRepository,
-        protected OrderService $orderService,
+        protected DashboardPanelService $dashboardPanelService,
     ) {}
 
     public function __invoke(Request $request): View
@@ -35,16 +33,18 @@ class DashboardController extends Controller
     public function floorState(): JsonResponse
     {
         $tables = DiningTable::query()->orderBy('table_number')->get();
+        $tableIds = $tables->pluck('id');
 
         $sessionsByTable = CustomerSession::query()
             ->where('status', SessionStatus::Active->value)
-            ->whereIn('table_id', $tables->pluck('id'))
+            ->whereIn('table_id', $tableIds)
             ->get()
             ->keyBy('table_id');
 
         $orders = Order::query()
-            ->with(['items.menuItem', 'invoice', 'payments', 'diningSession'])
-            ->whereIn('table_id', $tables->pluck('id'))
+            ->select(['id', 'table_id', 'status'])
+            ->with(['items:id,order_id,preparation_status'])
+            ->whereIn('table_id', $tableIds)
             ->orderByDesc('id')
             ->get()
             ->groupBy('table_id');
@@ -54,7 +54,7 @@ class DashboardController extends Controller
                 DiningSessionStatus::InProgress->value,
                 DiningSessionStatus::FoodDelivered->value,
             ])
-            ->whereIn('table_id', $tables->pluck('id'))
+            ->whereIn('table_id', $tableIds)
             ->get()
             ->keyBy('table_id');
 
@@ -125,85 +125,16 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function tablePanel(DiningTable $diningTable): JsonResponse
+    public function tablePanel(Request $request, DiningTable $diningTable): JsonResponse
     {
-        $orders = Order::query()
-            ->where('table_id', $diningTable->id)
-            ->with(['items.menuItem', 'invoice', 'payments', 'customerSession', 'diningSession'])
-            ->orderByDesc('id')
-            ->get();
+        $historyPage = max(1, (int) $request->query('history_page', 1));
 
-        $sessions = $orders->groupBy(fn ($o) => $o->dining_session_id ?: $o->customer_session_id ?: 'single-'.$o->id);
-
-        return response()->json([
-            'table' => [
-                'id' => $diningTable->id,
-                'table_name' => $diningTable->table_name,
-                'table_number' => $diningTable->table_number,
-                'status' => $diningTable->status->value,
-                'seat_capacity' => $diningTable->seat_capacity,
-            ],
-            'visual' => DashboardFloorVisual::forTable($diningTable, $orders),
-            'active_orders' => $orders
-                ->filter(fn ($o) => in_array($o->status, [
-                    OrderStatus::Pending,
-                    OrderStatus::Preparing,
-                    OrderStatus::Completed,
-                ], true))
-                ->values()
-                ->map(fn (Order $o) => $this->serializeOrderForPanel($o)),
-            'sessions' => $sessions->map(fn (Collection $group) => [
-                'dining_session_id' => $group->first()?->dining_session_id,
-                'session_code' => $group->first()?->diningSession?->session_code,
-                'session_status' => $group->first()?->diningSession?->status?->value,
-                'started_at' => $group->first()?->diningSession?->started_at?->toIso8601String(),
-                'subtotal' => (string) ($group->first()?->diningSession?->subtotal ?? 0),
-                'tax' => (string) ($group->first()?->diningSession?->tax ?? 0),
-                'discount' => (string) ($group->first()?->diningSession?->discount ?? 0),
-                'grand_total' => (string) ($group->first()?->diningSession?->grand_total ?? $group->sum('total_amount')),
-                'customer_session_id' => $group->first()?->customer_session_id,
-                'orders' => $group->map(fn (Order $o) => $this->serializeOrderForPanel($o))->values(),
-            ])->values(),
-            'menu_catalog' => $this->staffMenuCatalogPayload(),
-        ]);
+        return response()->json($this->dashboardPanelService->tablePanelPayload($diningTable, $historyPage));
     }
 
     public function staffMenuCatalog(): JsonResponse
     {
-        return response()->json($this->staffMenuCatalogPayload());
-    }
-
-    /**
-     * @return array{categories: array<int, array<string, mixed>>}
-     */
-    protected function staffMenuCatalogPayload(): array
-    {
-        $categories = Category::query()
-            ->where('is_active', true)
-            ->with(['menuItems' => fn ($q) => $q->orderBy('name')])
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
-
-        return [
-            'categories' => $categories->map(fn (Category $c) => [
-                'id' => $c->id,
-                'name' => $c->name,
-                'items' => $c->menuItems->map(fn ($m) => [
-                    'id' => $m->id,
-                    'name' => $m->name,
-                    'price' => (string) $m->price,
-                ])->values()->all(),
-            ])->values()->all(),
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    protected function serializeOrderForPanel(Order $order): array
-    {
-        return $this->orderService->orderPanelPayload($order);
+        return response()->json($this->dashboardPanelService->staffMenuCatalogPayload());
     }
 
     public function poll(Request $request): JsonResponse

@@ -84,8 +84,17 @@ class OrderService
                 ]);
             }
 
+            $menuItems = MenuItem::query()
+                ->whereIn('id', collect($lines)->pluck('menu_item_id')->filter()->unique()->values())
+                ->get()
+                ->keyBy('id');
+
             foreach ($lines as $line) {
-                $menuItem = MenuItem::query()->findOrFail($line['menu_item_id']);
+                $menuItem = $menuItems->get((int) $line['menu_item_id']);
+                if (! $menuItem) {
+                    abort(404, 'Menu item not found.');
+                }
+
                 OrderItem::query()->create([
                     'order_id' => $order->id,
                     'menu_item_id' => $menuItem->id,
@@ -100,7 +109,6 @@ class OrderService
             }
 
             $order = $this->recalculateTotal($order);
-            $this->diningSessionService->syncTotals($diningSession);
             $this->diningSessionService->syncProgressStatus($diningSession);
 
             $table->update(['status' => TableStatus::Occupied]);
@@ -253,10 +261,15 @@ class OrderService
 
     public function recalculateTotal(Order $order): Order
     {
-        $order->loadMissing('items');
+        $order->loadMissing(['items', 'invoice']);
         $sum = $order->items->sum(fn (OrderItem $item) => (float) $item->price * (int) $item->quantity);
         $this->orderRepository->update($order, ['total_amount' => round($sum, 2)]);
-        $fresh = $order->fresh(['items.menuItem', 'diningSession']);
+
+        if ($order->invoice) {
+            $this->syncInvoiceTotals($order->invoice, round($sum, 2));
+        }
+
+        $fresh = $order->fresh(['items.menuItem', 'diningSession', 'invoice']);
         if ($fresh->diningSession) {
             $this->diningSessionService->syncTotals($fresh->diningSession);
         }
@@ -277,6 +290,21 @@ class OrderService
             'tax' => $tax,
             'total' => $total,
         ]);
+    }
+
+    protected function syncInvoiceTotals(Invoice $invoice, float $subtotal): Invoice
+    {
+        $taxRate = (float) config('restaurant.tax_rate', 0.08);
+        $tax = round($subtotal * $taxRate, 2);
+        $total = round($subtotal + $tax, 2);
+
+        $invoice->update([
+            'subtotal' => $subtotal,
+            'tax' => $tax,
+            'total' => $total,
+        ]);
+
+        return $invoice->fresh();
     }
 
     protected function tableHasOpenGuestSession(int $tableId, ?CustomerSession $customerSession): bool

@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const storeUrl = root.dataset.ordersStoreUrl ?? '';
     const summaryUrl = root.dataset.orderSummaryUrl ?? '';
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+    let submittingOrder = false;
 
     /** @type {Array<{ lineId: string, menu_item_id: number, name: string, price: number, quantity: number, notes: string }>} */
     let lines = [];
@@ -294,9 +295,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const submitBtn = document.getElementById('guest-place-order-btn');
         const has = lines.length > 0;
         if (submitBtn) {
-            submitBtn.disabled = !has;
-            submitBtn.classList.toggle('opacity-40', !has);
-            submitBtn.classList.toggle('pointer-events-none', !has);
+            submitBtn.disabled = !has || submittingOrder;
+            submitBtn.classList.toggle('opacity-40', !has || submittingOrder);
+            submitBtn.classList.toggle('pointer-events-none', !has || submittingOrder);
+            submitBtn.innerHTML = submittingOrder
+                ? '<span class="inline-flex items-center gap-2"><span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span><span>Placing order...</span></span>'
+                : 'Place order';
         }
 
         syncCardSteppers();
@@ -310,7 +314,16 @@ document.addEventListener('DOMContentLoaded', () => {
         applyChromeAnimations(anim);
     }
 
-    async function refreshOrderPanel() {
+    async function refreshOrderPanel(html = null) {
+        if (html) {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const next = doc.getElementById('guest-order-panel');
+            const cur = document.getElementById('guest-order-panel');
+            if (next && cur) {
+                cur.replaceWith(next);
+            }
+            return;
+        }
         if (!summaryUrl) {
             return;
         }
@@ -354,9 +367,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function submitOrder() {
-        if (!storeUrl || lines.length === 0) {
+        if (!storeUrl || lines.length === 0 || submittingOrder) {
             return;
         }
+        submittingOrder = true;
+        render();
         const payload = {
             items: lines.map((l) => {
                 const row = {
@@ -383,16 +398,21 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
+                submittingOrder = false;
+                render();
                 window.alert(data.message || 'Could not place order.');
                 return;
             }
             lines = [];
             persistCart();
+            submittingOrder = false;
             render({ interactive: true });
             showOrderSuccess();
-            await refreshOrderPanel();
+            await refreshOrderPanel(data.order_panel_html ?? null);
             closeDrawer();
         } catch {
+            submittingOrder = false;
+            render();
             window.alert('Network error. Try again.');
         }
     }

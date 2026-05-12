@@ -18,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -136,12 +137,7 @@ class CustomerOrderingController extends Controller
 
         $customerSession->update(['last_seen_at' => now()]);
 
-        $categories = Category::query()
-            ->where('is_active', true)
-            ->with(['menuItems' => fn ($query) => $query->where('is_available', true)->orderBy('name')])
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
+        $categories = $this->guestMenuCategories();
 
         foreach ($categories as $category) {
             foreach ($category->menuItems as $menuItem) {
@@ -149,11 +145,7 @@ class CustomerOrderingController extends Controller
             }
         }
 
-        $sessionOrders = Order::query()
-            ->with(['items.menuItem', 'table', 'invoice', 'payments'])
-            ->where('customer_session_id', $customerSession->id)
-            ->latest('id')
-            ->get();
+        $sessionOrders = $this->guestSessionOrders($customerSession);
         $activeOrder = $sessionOrders
             ->first(fn ($order) => in_array($order->status, [
                 OrderStatus::Pending,
@@ -211,6 +203,22 @@ class CustomerOrderingController extends Controller
         $customerSession->update(['last_seen_at' => now()]);
 
         if ($request->wantsJson()) {
+            $sessionOrders = $this->guestSessionOrders($customerSession->fresh('table'));
+            $activeOrder = $sessionOrders
+                ->first(fn ($sessionOrder) => in_array($sessionOrder->status, [
+                    OrderStatus::Pending,
+                    OrderStatus::Preparing,
+                    OrderStatus::Completed,
+                ], true));
+            $sessionTotal = $sessionOrders->sum(fn ($sessionOrder) => (float) $sessionOrder->total_amount);
+            $hasOpenKitchenOrders = $sessionOrders->contains(
+                fn ($sessionOrder) => in_array($sessionOrder->status, [
+                    OrderStatus::Pending,
+                    OrderStatus::Preparing,
+                    OrderStatus::Completed,
+                ], true)
+            );
+
             return response()->json([
                 'message' => 'Your order has been sent to the kitchen.',
                 'order' => [
@@ -219,6 +227,13 @@ class CustomerOrderingController extends Controller
                     'total_amount' => (string) $order->total_amount,
                     'table_id' => $order->table_id,
                 ],
+                'order_panel_html' => view('guest.partials.order-session-panel', [
+                    'sessionOrders' => $sessionOrders,
+                    'sessionTotal' => $sessionTotal,
+                    'activeOrder' => $activeOrder,
+                    'table' => $customerSession->table,
+                    'hasOpenKitchenOrders' => $hasOpenKitchenOrders,
+                ])->render(),
             ]);
         }
 
@@ -280,11 +295,7 @@ class CustomerOrderingController extends Controller
         }
         $customerSession = $redirect;
 
-        $sessionOrders = Order::query()
-            ->with(['items.menuItem', 'table', 'invoice', 'payments'])
-            ->where('customer_session_id', $customerSession->id)
-            ->latest('id')
-            ->get();
+        $sessionOrders = $this->guestSessionOrders($customerSession);
 
         $activeOrder = $sessionOrders->first(
             fn ($order) => in_array($order->status, [
@@ -457,5 +468,26 @@ class CustomerOrderingController extends Controller
             'last_seen_at' => Carbon::now(),
             'status' => SessionStatus::Active,
         ]);
+    }
+
+    protected function guestMenuCategories()
+    {
+        return Cache::remember('guest:menu-categories', now()->addMinutes(5), function () {
+            return Category::query()
+                ->where('is_active', true)
+                ->with(['menuItems' => fn ($query) => $query->where('is_available', true)->orderBy('name')])
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get();
+        });
+    }
+
+    protected function guestSessionOrders(CustomerSession $customerSession)
+    {
+        return Order::query()
+            ->with(['items.menuItem'])
+            ->where('customer_session_id', $customerSession->id)
+            ->latest('id')
+            ->get();
     }
 }

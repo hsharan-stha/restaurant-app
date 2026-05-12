@@ -6,13 +6,15 @@ use App\Http\Requests\StoreOrderItemLineRequest;
 use App\Http\Requests\UpdateOrderItemLineRequest;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Services\DashboardPanelService;
 use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
 
 class PendingOrderItemController extends Controller
 {
     public function __construct(
-        protected OrderService $orderService
+        protected OrderService $orderService,
+        protected DashboardPanelService $dashboardPanelService,
     ) {}
 
     public function store(StoreOrderItemLineRequest $request, Order $order): JsonResponse
@@ -25,7 +27,10 @@ class PendingOrderItemController extends Controller
             $request->validated('options') ?? [],
         );
 
-        return response()->json(['order' => $this->orderService->serializeOrderForApi($order)]);
+        return response()->json([
+            'order' => $this->orderService->serializeOrderForApi($order),
+            'panel' => $this->dashboardPanelService->tablePanelPayload($order->table()->firstOrFail()),
+        ]);
     }
 
     public function increment(Order $order, OrderItem $orderItem): JsonResponse
@@ -33,7 +38,10 @@ class PendingOrderItemController extends Controller
         $this->assertItemBelongs($order, $orderItem);
         $order = $this->orderService->incrementOrderItem($orderItem);
 
-        return response()->json(['order' => $this->orderService->serializeOrderForApi($order)]);
+        return response()->json([
+            'order' => $this->orderService->serializeOrderForApi($order),
+            'panel' => $this->dashboardPanelService->tablePanelPayload($order->table()->firstOrFail()),
+        ]);
     }
 
     public function decrement(Order $order, OrderItem $orderItem): JsonResponse
@@ -41,7 +49,10 @@ class PendingOrderItemController extends Controller
         $this->assertItemBelongs($order, $orderItem);
         $order = $this->orderService->decrementOrderItem($orderItem);
 
-        return response()->json(['order' => $this->orderService->serializeOrderForApi($order)]);
+        return response()->json([
+            'order' => $this->orderService->serializeOrderForApi($order),
+            'panel' => $this->dashboardPanelService->tablePanelPayload($order->table()->firstOrFail()),
+        ]);
     }
 
     public function destroy(Order $order, OrderItem $orderItem): JsonResponse
@@ -49,7 +60,10 @@ class PendingOrderItemController extends Controller
         $this->assertItemBelongs($order, $orderItem);
         $order = $this->orderService->removeOrderItem($orderItem);
 
-        return response()->json(['order' => $this->orderService->serializeOrderForApi($order)]);
+        return response()->json([
+            'order' => $this->orderService->serializeOrderForApi($order),
+            'panel' => $this->dashboardPanelService->tablePanelPayload($order->table()->firstOrFail()),
+        ]);
     }
 
     public function update(UpdateOrderItemLineRequest $request, Order $order, OrderItem $orderItem): JsonResponse
@@ -60,7 +74,10 @@ class PendingOrderItemController extends Controller
             $request->validated(),
         );
 
-        return response()->json(['order' => $this->orderService->serializeOrderForApi($order)]);
+        return response()->json([
+            'order' => $this->orderService->serializeOrderForApi($order),
+            'panel' => $this->dashboardPanelService->tablePanelPayload($order->table()->firstOrFail()),
+        ]);
     }
 
     protected function assertItemBelongs(Order $order, OrderItem $orderItem): void

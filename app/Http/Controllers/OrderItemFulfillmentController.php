@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\PreparationStatus;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Services\DashboardPanelService;
 use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,7 +13,8 @@ use Illuminate\Http\Request;
 class OrderItemFulfillmentController extends Controller
 {
     public function __construct(
-        protected OrderService $orderService
+        protected OrderService $orderService,
+        protected DashboardPanelService $dashboardPanelService,
     ) {}
 
     public function markPreparing(Order $order, OrderItem $orderItem): JsonResponse
@@ -20,7 +22,10 @@ class OrderItemFulfillmentController extends Controller
         $this->assertItemBelongs($order, $orderItem);
         $order = $this->orderService->updateOrderItemPreparationStatus($orderItem, PreparationStatus::Preparing);
 
-        return response()->json(['order' => $this->orderService->serializeOrderForApi($order)]);
+        return response()->json([
+            'order' => $this->orderService->serializeOrderForApi($order),
+            'panel' => $this->dashboardPanelService->tablePanelPayload($order->table()->firstOrFail()),
+        ]);
     }
 
     public function markReady(Order $order, OrderItem $orderItem): JsonResponse
@@ -28,7 +33,10 @@ class OrderItemFulfillmentController extends Controller
         $this->assertItemBelongs($order, $orderItem);
         $order = $this->orderService->updateOrderItemPreparationStatus($orderItem, PreparationStatus::Ready);
 
-        return response()->json(['order' => $this->orderService->serializeOrderForApi($order)]);
+        return response()->json([
+            'order' => $this->orderService->serializeOrderForApi($order),
+            'panel' => $this->dashboardPanelService->tablePanelPayload($order->table()->firstOrFail()),
+        ]);
     }
 
     public function deliver(Request $request, Order $order, OrderItem $orderItem): JsonResponse
@@ -43,14 +51,20 @@ class OrderItemFulfillmentController extends Controller
             $request->user()?->id
         );
 
-        return response()->json(['order' => $this->orderService->serializeOrderForApi($updatedOrder)]);
+        return response()->json([
+            'order' => $this->orderService->serializeOrderForApi($updatedOrder),
+            'panel' => $this->dashboardPanelService->tablePanelPayload($updatedOrder->table()->firstOrFail()),
+        ]);
     }
 
     public function deliverAllReady(Request $request, Order $order): JsonResponse
     {
         $updatedOrder = $this->orderService->deliverAllReadyItemsForOrder($order, $request->user()?->id);
 
-        return response()->json(['order' => $this->orderService->serializeOrderForApi($updatedOrder)]);
+        return response()->json([
+            'order' => $this->orderService->serializeOrderForApi($updatedOrder),
+            'panel' => $this->dashboardPanelService->tablePanelPayload($updatedOrder->table()->firstOrFail()),
+        ]);
     }
 
     protected function assertItemBelongs(Order $order, OrderItem $orderItem): void

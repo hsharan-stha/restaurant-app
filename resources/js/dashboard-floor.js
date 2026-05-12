@@ -16,6 +16,7 @@ const VISUAL_BASE = {
 const KITCHEN_MODE_KEY = 'restaurant-dashboard-kitchen-mode';
 /** Debounce for batched canvas refreshes (ms). Critical order events bypass this. */
 const REFRESH_DEBOUNCE_MS = 40;
+const SESSION_HISTORY_PAGE_SIZE = 5;
 
 function tableDisplayLabel(tableName, tableNumber) {
     const n = (tableName ?? '').trim();
@@ -334,6 +335,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let refreshTimer = null;
+    let floorStateRequest = null;
+    let floorStateQueued = false;
+    let queuedFullRebuild = false;
     /** @param {boolean} [immediate] If true, refresh canvas now (no debounce). Use for order alerts. */
     const scheduleRefresh = (immediate = false) => {
         if (refreshTimer) {
@@ -354,7 +358,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     async function loadFloorState(fullRebuild) {
-        const data = await fetchJson(urlFloorState);
+        if (floorStateRequest) {
+            floorStateQueued = true;
+            queuedFullRebuild = queuedFullRebuild || fullRebuild;
+            return floorStateRequest;
+        }
+
+        floorStateRequest = (async () => {
+            const data = await fetchJson(urlFloorState);
         if (liveCountEl) {
             liveCountEl.textContent = `${data.live_order_count ?? 0} live`;
         }
@@ -383,10 +394,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         applySearchFilter();
         layer.batchDraw();
+        })();
+
+        try {
+            await floorStateRequest;
+        } finally {
+            floorStateRequest = null;
+            if (floorStateQueued) {
+                const nextFullRebuild = queuedFullRebuild;
+                floorStateQueued = false;
+                queuedFullRebuild = false;
+                loadFloorState(nextFullRebuild).catch(() => {});
+            }
+        }
     }
 
-    function panelUrl(id) {
-        return urlPanelTemplate.replace('__ID__', String(id));
+    function panelUrl(id, historyPage = sessionHistoryPage) {
+        const url = new URL(urlPanelTemplate.replace('__ID__', String(id)), window.location.origin);
+        url.searchParams.set('history_page', String(Math.max(1, Number(historyPage) || 1)));
+        return url.toString();
     }
 
     function orderStatusUrl(orderId) {
@@ -437,7 +463,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderLineItem(order, it, editable) {
+    function renderLineItem(order, it, editable, options = {}) {
+        const historyMode = options.history === true;
         const prep = String(it.preparation_status ?? 'pending');
         const statusMap = {
             pending: { label: 'Pending', cls: 'bg-red-950/40 text-red-200 border-red-800/50' },
@@ -449,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const remaining = Number(it.remaining_quantity ?? Math.max(0, Number(it.quantity ?? 0) - Number(it.delivered_quantity ?? 0)));
         const deliveredQty = Number(it.delivered_quantity ?? 0);
         const canDeliver = remaining > 0;
-        const prepActions = `
+        const prepActions = historyMode ? '' : `
             <div class="mt-2 flex flex-wrap gap-1.5">
                 <button type="button" data-df-item-action="mark-preparing" data-order-id="${order.id}" data-item-id="${it.id}" class="rounded-md border border-orange-900/60 px-2 py-1 text-[10px] font-semibold text-orange-200 hover:bg-orange-950/50">Mark Preparing</button>
                 <button type="button" data-df-item-action="mark-ready" data-order-id="${order.id}" data-item-id="${it.id}" class="rounded-md border border-blue-900/60 px-2 py-1 text-[10px] font-semibold text-blue-200 hover:bg-blue-950/50">Mark Ready</button>
@@ -511,10 +538,17 @@ document.addEventListener('DOMContentLoaded', () => {
             </details>`;
     }
 
-    function renderOrderCard(order) {
-        const editable = order.editable === true;
+    let sessionHistoryPage = 1;
+
+    function renderOrderCard(order, options = {}) {
+        const historyMode = options.history === true;
+        const editable = historyMode ? false : order.editable === true;
         let lockBanner = '';
-        if (!editable && order.status === 'preparing') {
+        if (historyMode) {
+            lockBanner = `<div class="mb-3 rounded-xl border border-slate-700/50 bg-slate-950/30 px-3 py-2 text-xs text-slate-200">
+                        History view only
+                    </div>`;
+        } else if (!editable && order.status === 'preparing') {
             lockBanner = `<div class="mb-3 flex items-center gap-2 rounded-xl border border-amber-700/50 bg-amber-950/40 px-3 py-2 text-xs text-amber-100">
                         <span aria-hidden="true">🔒</span>
                         <span>Order already sent to kitchen</span>
@@ -525,7 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>`;
         }
 
-        const lines = (order.items ?? []).map((it) => renderLineItem(order, it, editable)).join('');
+        const lines = (order.items ?? []).map((it) => renderLineItem(order, it, editable, { history: historyMode })).join('');
         const readyCount = (order.items ?? []).filter((it) => String(it.preparation_status) === 'ready' && Number(it.remaining_quantity ?? 0) > 0).length;
 
         const totals = `
@@ -534,7 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
 
         const addBlock = editable ? renderAddItemBlock(order) : '';
-        const deliverAllBlock = readyCount > 0
+        const deliverAllBlock = !historyMode && readyCount > 0
             ? `<button type="button" data-df-order-action="deliver-all-ready" data-order-id="${order.id}" class="mt-3 w-full rounded-lg border border-emerald-800/60 bg-emerald-950/35 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-900/40">Deliver All Ready Items (${readyCount})</button>`
             : '';
 
@@ -557,6 +591,46 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = activeOrdersEl?.querySelector(`[data-df-order-card="${order.id}"]`);
         if (el) {
             el.outerHTML = renderOrderCard(order);
+        }
+    }
+
+    function renderSessionHistory(data) {
+        if (!sessionHistoryEl) {
+            return;
+        }
+
+        const history = data.session_history ?? {};
+        const historySessions = history.data ?? [];
+
+        if (!historySessions.length) {
+            sessionHistoryEl.innerHTML = '<p class="text-sm text-orange-800">No completed session history.</p>';
+            return;
+        }
+
+        const totalPages = Math.max(1, Number(history.last_page ?? 1));
+        sessionHistoryPage = Math.min(Math.max(1, Number(history.current_page ?? 1)), totalPages);
+
+        sessionHistoryEl.innerHTML = historySessions
+            .map((sess, idx) => {
+                const start = (sessionHistoryPage - 1) * Number(history.per_page ?? SESSION_HISTORY_PAGE_SIZE);
+                const sid = sess.customer_session_id ? `Session #${sess.customer_session_id}` : `Visit ${start + idx + 1}`;
+                const blocks = (sess.orders ?? []).map((order) => renderOrderCard(order, { history: true })).join('');
+                return `<details class="group rounded-xl border border-orange-950/50 bg-black/10 open:bg-black/20">
+                    <summary class="cursor-pointer px-3 py-2 text-sm font-semibold text-orange-200">${escapeHtml(sid)}</summary>
+                    <div class="space-y-2 border-t border-orange-950/40 px-3 py-3">${blocks}</div>
+                </details>`;
+            })
+            .join('');
+
+        if (totalPages > 1) {
+            sessionHistoryEl.insertAdjacentHTML(
+                'beforeend',
+                `<div class="mt-3 flex items-center justify-between gap-3 rounded-xl border border-orange-900/40 bg-black/15 px-3 py-2 text-xs text-orange-200">
+                    <button type="button" data-df-history-page="prev" class="rounded-lg border border-orange-800 px-2.5 py-1 disabled:cursor-not-allowed disabled:opacity-40" ${sessionHistoryPage <= 1 ? 'disabled' : ''}>Prev</button>
+                    <span>Page ${sessionHistoryPage} / ${totalPages}</span>
+                    <button type="button" data-df-history-page="next" class="rounded-lg border border-orange-800 px-2.5 py-1 disabled:cursor-not-allowed disabled:opacity-40" ${sessionHistoryPage >= totalPages ? 'disabled' : ''}>Next</button>
+                </div>`
+            );
         }
     }
 
@@ -584,7 +658,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     return;
                 }
-                mergeOrderFromResponse(data.order);
+                if (data.panel) {
+                    applyPanelData(data.panel);
+                } else {
+                    mergeOrderFromResponse(data.order);
+                }
                 scheduleRefresh(true);
             } catch (err) {
                 window.alert(err instanceof Error ? err.message : 'Update failed');
@@ -600,7 +678,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             try {
                 const data = await fetchJson(deliverAllReadyUrl(orderId), { method: 'POST' });
-                mergeOrderFromResponse(data.order);
+                if (data.panel) {
+                    applyPanelData(data.panel);
+                } else {
+                    mergeOrderFromResponse(data.order);
+                }
                 scheduleRefresh(true);
             } catch (err) {
                 window.alert(err instanceof Error ? err.message : 'Update failed');
@@ -637,7 +719,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         options: {},
                     }),
                 });
-                mergeOrderFromResponse(data.order);
+                if (data.panel) {
+                    applyPanelData(data.panel);
+                } else {
+                    mergeOrderFromResponse(data.order);
+                }
                 scheduleRefresh(true);
                 return;
             }
@@ -649,18 +735,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'POST',
                     body: JSON.stringify({}),
                 });
-                mergeOrderFromResponse(data.order);
+                if (data.panel) {
+                    applyPanelData(data.panel);
+                } else {
+                    mergeOrderFromResponse(data.order);
+                }
             } else if (act === 'dec') {
                 const data = await fetchJson(`${urlOrdersBase}/${orderId}/items/${itemId}/decrement`, {
                     method: 'POST',
                     body: JSON.stringify({}),
                 });
-                mergeOrderFromResponse(data.order);
+                if (data.panel) {
+                    applyPanelData(data.panel);
+                } else {
+                    mergeOrderFromResponse(data.order);
+                }
             } else if (act === 'remove') {
                 const data = await fetchJson(`${urlOrdersBase}/${orderId}/items/${itemId}`, {
                     method: 'DELETE',
                 });
-                mergeOrderFromResponse(data.order);
+                if (data.panel) {
+                    applyPanelData(data.panel);
+                } else {
+                    mergeOrderFromResponse(data.order);
+                }
             }
             scheduleRefresh(true);
         } catch (err) {
@@ -804,8 +902,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
     }
 
-    async function loadPanel(tableId) {
-        const data = await fetchJson(panelUrl(tableId));
+    function applyPanelData(data) {
         panelMenuCatalog = data.menu_catalog ?? null;
         if (drawerTitle) {
             drawerTitle.textContent = data.table?.table_name ?? `Table ${data.table?.table_number}`;
@@ -824,6 +921,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (sessionActionsEl) {
             sessionActionsEl.innerHTML = buildSessionActions(data);
+            const sessions = data.sessions ?? [];
+            const openSession =
+                sessions.find((s) => (s.orders ?? []).some((o) => o.status !== 'checkout_done')) ??
+                sessions[0];
+            if (openSession) {
+                const runningTotalCard = Array.from(sessionActionsEl.querySelectorAll('div')).find((el) => {
+                    const text = (el.textContent ?? '').toLowerCase();
+                    return text.includes('running total');
+                });
+                if (runningTotalCard) {
+                    const subtotal = escapeHtml(String(openSession.subtotal ?? '0.00'));
+                    const tax = escapeHtml(String(openSession.tax ?? '0.00'));
+                    const alreadyPatched = runningTotalCard.querySelector('[data-df-session-subtotal]');
+                    const totalLabel = Array.from(runningTotalCard.querySelectorAll('span')).find((el) =>
+                        (el.textContent ?? '').toLowerCase().includes('running total')
+                    );
+                    if (totalLabel && !alreadyPatched) {
+                        totalLabel.insertAdjacentHTML(
+                            'beforebegin',
+                            `<div data-df-session-subtotal class="flex items-center justify-between gap-3 text-[11px] text-amber-200/80"><span>Subtotal</span><span class="font-semibold">¥${subtotal}</span></div>
+                             <div data-df-session-tax class="mt-1 flex items-center justify-between gap-3 text-[11px] text-amber-200/80"><span>Tax</span><span class="font-semibold">¥${tax}</span></div>`
+                        );
+                    } else if (alreadyPatched) {
+                        const subtotalRow = runningTotalCard.querySelector('[data-df-session-subtotal] .font-semibold');
+                        const taxRow = runningTotalCard.querySelector('[data-df-session-tax] .font-semibold');
+                        if (subtotalRow) {
+                            subtotalRow.textContent = `¥${subtotal}`;
+                        }
+                        if (taxRow) {
+                            taxRow.textContent = `¥${tax}`;
+                        }
+                    }
+                }
+            }
         }
         if (mobileSessionBar) {
             const sessions = data.sessions ?? [];
@@ -864,24 +995,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderStatusButtons(act, inlineWrap || statusActionsEl);
             }
         }
-        if (sessionHistoryEl) {
-            const sessions = data.sessions ?? [];
-            sessionHistoryEl.innerHTML = sessions
-                .map((sess, idx) => {
-                    const sid = sess.customer_session_id ? `Session #${sess.customer_session_id}` : `Visit ${idx + 1}`;
-                    const blocks = (sess.orders ?? []).map(renderOrderCard).join('');
-                    return `<details class="group rounded-xl border border-orange-950/50 bg-black/10 open:bg-black/20">
-                        <summary class="cursor-pointer px-3 py-2 text-sm font-semibold text-orange-200">${escapeHtml(sid)}</summary>
-                        <div class="space-y-2 border-t border-orange-950/40 px-3 py-3">${blocks}</div>
-                    </details>`;
-                })
-                .join('');
-        }
+        renderSessionHistory(data);
         if (drawerEmpty && drawerBody) {
             drawerEmpty.classList.add('hidden');
             drawerBody.classList.remove('hidden');
             drawerBody.classList.add('flex');
         }
+    }
+
+    async function loadPanel(tableId) {
+        const data = await fetchJson(panelUrl(tableId));
+        applyPanelData(data);
     }
 
     async function selectTable(group) {
@@ -1089,6 +1213,16 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput?.addEventListener('input', applySearchFilter);
 
     activeOrdersEl?.addEventListener('click', handlePosClick);
+    sessionHistoryEl?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-df-history-page]');
+        if (!btn) {
+            return;
+        }
+        sessionHistoryPage += btn.dataset.dfHistoryPage === 'next' ? 1 : -1;
+        if (selectedId) {
+            loadPanel(selectedId).catch(() => {});
+        }
+    });
     sessionActionsEl?.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-df-session-checkout]');
         if (!btn) return;
