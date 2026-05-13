@@ -10,7 +10,6 @@
 @section('title', $tableLabel.' · Menu')
 
 @push('guest_meta')
-    @include('components.guest-broadcast-meta')
     <meta name="guest-table-id" content="{{ $table->id }}">
     <meta name="guest-order-summary-url" content="{{ route('guest.order-summary') }}">
 @endpush

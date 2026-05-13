@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Enums\DiningSessionStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PreparationStatus;
 use App\Enums\SessionStatus;
 use App\Models\CustomerSession;
 use App\Models\DiningSession;
 use App\Models\DiningTable;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Enums\PreparationStatus;
 use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Services\DashboardPanelService;
 use App\Support\DashboardFloorVisual;
@@ -193,5 +193,90 @@ class DashboardController extends Controller
                 'announcement_text' => sprintf('Table number %s has requested checkout', $order->table?->table_number),
             ])->values(),
         ]);
+    }
+
+    /**
+     * Lightweight JSON for dashboard live polling (no WebSockets).
+     * When after_order_id is omitted or 0, returns snapshot only — no new_orders (client bootstrap).
+     */
+    public function latestOrders(Request $request): JsonResponse
+    {
+        $afterId = max(0, (int) $request->query('after_order_id', 0));
+        $liveStatuses = [
+            OrderStatus::Pending->value,
+            OrderStatus::Preparing->value,
+            OrderStatus::Completed->value,
+        ];
+
+        $latestOrderId = (int) (Order::query()->max('id') ?? 0);
+
+        $liveOrderCount = Order::query()->whereIn('status', $liveStatuses)->count();
+        $pendingOrderCount = Order::query()->where('status', OrderStatus::Pending->value)->count();
+
+        $recentOrders = Order::query()
+            ->select(['id', 'table_id', 'status', 'total_amount', 'ordered_at'])
+            ->with(['table:id,table_number,table_name'])
+            ->orderByDesc('id')
+            ->limit(12)
+            ->get()
+            ->map(fn (Order $o) => [
+                'id' => $o->id,
+                'status' => $o->status->value,
+                'total_amount' => (string) $o->total_amount,
+                'ordered_at' => $o->ordered_at?->toIso8601String(),
+                'table_number' => $o->table?->table_number,
+                'table_name' => $o->table?->table_name,
+                'table_label' => $this->tableDisplayLabel($o->table?->table_name, $o->table?->table_number),
+            ])
+            ->values();
+
+        if ($afterId <= 0) {
+            return response()->json([
+                'latest_order_id' => $latestOrderId,
+                'new_orders' => [],
+                'recent_orders' => $recentOrders,
+                'live_order_count' => $liveOrderCount,
+                'pending_order_count' => $pendingOrderCount,
+                'unread_count' => $pendingOrderCount,
+            ]);
+        }
+
+        $newOrders = Order::query()
+            ->select(['id', 'table_id', 'status', 'total_amount', 'ordered_at'])
+            ->with(['table:id,table_number,table_name'])
+            ->where('id', '>', $afterId)
+            ->where('status', OrderStatus::Pending->value)
+            ->orderBy('id')
+            ->limit(25)
+            ->get()
+            ->map(fn (Order $o) => [
+                'id' => $o->id,
+                'status' => $o->status->value,
+                'total_amount' => (string) $o->total_amount,
+                'ordered_at' => $o->ordered_at?->toIso8601String(),
+                'table_number' => $o->table?->table_number,
+                'table_name' => $o->table?->table_name,
+                'table_label' => $this->tableDisplayLabel($o->table?->table_name, $o->table?->table_number),
+            ])
+            ->values();
+
+        return response()->json([
+            'latest_order_id' => $latestOrderId,
+            'new_orders' => $newOrders,
+            'recent_orders' => $recentOrders,
+            'live_order_count' => $liveOrderCount,
+            'pending_order_count' => $pendingOrderCount,
+            'unread_count' => $pendingOrderCount,
+        ]);
+    }
+
+    private function tableDisplayLabel(?string $tableName, mixed $tableNumber): string
+    {
+        $n = trim((string) ($tableName ?? ''));
+        if ($n !== '') {
+            return $n;
+        }
+
+        return 'Table '.($tableNumber ?? '');
     }
 }

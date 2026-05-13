@@ -7,11 +7,6 @@ use App\Enums\OrderStatus;
 use App\Enums\PreparationStatus;
 use App\Enums\SessionStatus;
 use App\Enums\TableStatus;
-use App\Events\CheckoutCompletedEvent;
-use App\Events\OrderCompletedEvent;
-use App\Events\OrderPlacedEvent;
-use App\Events\OrderPreparingEvent;
-use App\Events\OrderUpdated;
 use App\Models\CustomerSession;
 use App\Models\DiningSession;
 use App\Models\DiningTable;
@@ -59,7 +54,6 @@ class OrderService
 
             $staffWalkIn = $customerSession === null;
 
-        
             if (! $staffWalkIn && ! $pendingOrder && ! $this->tableHasOpenGuestSession($tableId, $customerSession)) {
                 if ($table->status !== TableStatus::Available && $table->status !== TableStatus::Occupied) {
                     throw new \InvalidArgumentException('This table is not accepting new guest orders right now.');
@@ -116,8 +110,6 @@ class OrderService
 
             $order->load(['table', 'items.menuItem']);
 
-            rescue(fn () => event(new OrderPlacedEvent($order)), report: false);
-
             return $order;
         });
     }
@@ -143,15 +135,6 @@ class OrderService
             $fresh = $order->fresh(['table', 'items.menuItem', 'invoice', 'payments']);
             if ($fresh->diningSession) {
                 $this->diningSessionService->syncProgressStatus($fresh->diningSession);
-            }
-
-            rescue(fn () => event(new OrderUpdated($fresh, null)), report: false);
-
-            if ($status === OrderStatus::Preparing) {
-                rescue(fn () => event(new OrderPreparingEvent($fresh)), report: false);
-            }
-            if ($status === OrderStatus::Completed) {
-                rescue(fn () => event(new OrderCompletedEvent($fresh)), report: false);
             }
 
             return $fresh;
@@ -183,9 +166,6 @@ class OrderService
             $fresh = $order->fresh(['table', 'items.menuItem', 'invoice', 'payments', 'customerSession']);
 
             $this->releaseTableAndCloseSessionIfIdle($fresh);
-
-            rescue(fn () => event(new OrderUpdated($fresh, null)), report: false);
-            rescue(fn () => event(new CheckoutCompletedEvent($fresh)), report: false);
 
             return $fresh;
         });
@@ -412,7 +392,6 @@ class OrderService
             $item->update(['quantity' => $item->quantity + 1]);
             $order = $this->recalculateTotal($order->fresh());
             $order->load(['table', 'items.menuItem']);
-            rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
 
             return $order;
         });
@@ -436,7 +415,6 @@ class OrderService
             }
             $order->load(['table', 'items.menuItem']);
             $order = $this->syncOrderCompletionFromItems($order);
-            rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
 
             return $order;
         });
@@ -453,7 +431,6 @@ class OrderService
             $order = $this->recalculateTotal($order->fresh());
             $order->load(['table', 'items.menuItem']);
             $order = $this->syncOrderCompletionFromItems($order);
-            rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
 
             return $order;
         });
@@ -490,7 +467,6 @@ class OrderService
             if ($order->diningSession) {
                 $this->diningSessionService->syncProgressStatus($order->diningSession);
             }
-            rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
 
             return $order;
         });
@@ -515,7 +491,6 @@ class OrderService
             $item->save();
 
             $order = $order->fresh(['table', 'items.menuItem']);
-            rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
 
             return $order;
         });
@@ -541,7 +516,6 @@ class OrderService
             $item->save();
 
             $order = $this->syncOrderCompletionFromItems($order->fresh());
-            rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
 
             return $order->fresh(['table', 'items.menuItem']);
         });
@@ -570,7 +544,6 @@ class OrderService
             $item->save();
 
             $order = $this->syncOrderCompletionFromItems($order->fresh());
-            rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
 
             return $order->fresh(['table', 'items.menuItem']);
         });
@@ -600,7 +573,6 @@ class OrderService
             }
 
             $order = $this->syncOrderCompletionFromItems($order->fresh());
-            rescue(fn () => event(new OrderUpdated($order, $this->voiceLineForOrder($order))), report: false);
 
             return $order->fresh(['table', 'items.menuItem']);
         });
@@ -652,15 +624,5 @@ class OrderService
     protected function ensurePending(Order $order): void
     {
         abort_unless($order->status === OrderStatus::Pending, 422, 'Order is not pending. Editing is locked once the kitchen starts preparing.');
-    }
-
-    protected function voiceLineForOrder(Order $order): string
-    {
-        $order->loadMissing('table');
-        $t = $order->table;
-        $name = trim((string) ($t?->table_name ?? ''));
-        $label = $name !== '' ? $name : ('Table '.($t?->table_number ?? ''));
-
-        return "Order updated for {$label}.";
     }
 }

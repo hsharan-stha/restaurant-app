@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('api/latest-orders', [DashboardController::class, 'latestOrders'])->name('dashboard.api.latest-orders');
     Route::get('dashboard/poll', [DashboardController::class, 'poll'])->name('dashboard.poll');
     Route::get('dashboard/floor/state', [DashboardController::class, 'floorState'])->name('dashboard.floor.state');
     Route::get('dashboard/floor/tables/{diningTable}/panel', [DashboardController::class, 'tablePanel'])->name('dashboard.floor.table.panel');

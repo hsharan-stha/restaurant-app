@@ -488,6 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderLineItem(order, it, editable, options = {}) {
         const historyMode = options.history === true;
+        const compact = options.compact === true;
         const prep = String(it.preparation_status ?? 'pending');
         const statusMap = {
             pending: { label: 'Pending', cls: 'bg-red-950/40 text-red-200 border-red-800/50' },
@@ -499,34 +500,49 @@ document.addEventListener('DOMContentLoaded', () => {
         const remaining = Number(it.remaining_quantity ?? Math.max(0, Number(it.quantity ?? 0) - Number(it.delivered_quantity ?? 0)));
         const deliveredQty = Number(it.delivered_quantity ?? 0);
         const canDeliver = remaining > 0;
-        const prepActions = historyMode ? '' : `
-            <div class="mt-2 flex flex-wrap gap-1.5">
-                <button type="button" data-df-item-action="mark-preparing" data-order-id="${order.id}" data-item-id="${it.id}" class="rounded-md border border-orange-900/60 px-2 py-1 text-[10px] font-semibold text-orange-200 hover:bg-orange-950/50">Mark Preparing</button>
-                <button type="button" data-df-item-action="mark-ready" data-order-id="${order.id}" data-item-id="${it.id}" class="rounded-md border border-blue-900/60 px-2 py-1 text-[10px] font-semibold text-blue-200 hover:bg-blue-950/50">Mark Ready</button>
-                <button type="button" data-df-item-action="deliver" data-order-id="${order.id}" data-item-id="${it.id}" data-remaining="${remaining}" ${canDeliver ? '' : 'disabled'} class="rounded-md border border-emerald-900/60 bg-emerald-950/20 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-950/50 disabled:cursor-not-allowed disabled:opacity-40">Deliver Item</button>
+        const prepBtnLayout = compact ? 'mt-2 flex flex-col gap-1' : 'mt-2 flex flex-wrap gap-1.5';
+        const prepActions = historyMode
+            ? ''
+            : `
+            <div class="${prepBtnLayout}">
+                <button type="button" data-df-item-action="mark-preparing" data-order-id="${order.id}" data-item-id="${it.id}" class="rounded-md border border-orange-900/60 px-2 py-1.5 text-[10px] font-semibold text-orange-200 hover:bg-orange-950/50">Mark Preparing</button>
+                <button type="button" data-df-item-action="mark-ready" data-order-id="${order.id}" data-item-id="${it.id}" class="rounded-md border border-blue-900/60 px-2 py-1.5 text-[10px] font-semibold text-blue-200 hover:bg-blue-950/50">Mark Ready</button>
+                <button type="button" data-df-item-action="deliver" data-order-id="${order.id}" data-item-id="${it.id}" data-remaining="${remaining}" ${canDeliver ? '' : 'disabled'} class="rounded-md border border-emerald-900/60 bg-emerald-950/20 px-2 py-1.5 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-950/50 disabled:cursor-not-allowed disabled:opacity-40">Deliver Item</button>
             </div>`;
-        const ctrls = editable
-            ? `<div class="mt-3 flex flex-wrap items-center gap-2">
+        const qtyRow = compact
+            ? `<div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <button type="button" data-df-pos-action="dec" data-order-id="${order.id}" data-item-id="${it.id}" class="min-h-[40px] min-w-[40px] shrink-0 rounded-lg border border-orange-700 bg-orange-950/60 text-lg font-bold leading-none text-orange-50 hover:bg-orange-900">−</button>
+                    <span class="min-w-[2rem] text-center text-sm font-semibold tabular-nums text-orange-50">${it.quantity}</span>
+                    <button type="button" data-df-pos-action="inc" data-order-id="${order.id}" data-item-id="${it.id}" class="min-h-[40px] min-w-[40px] shrink-0 rounded-lg border border-orange-700 bg-orange-950/60 text-lg font-bold leading-none text-orange-50 hover:bg-orange-900">+</button>
+                    <button type="button" data-df-pos-action="remove" data-order-id="${order.id}" data-item-id="${it.id}" class="ml-auto rounded-lg border border-red-900/60 bg-red-950/40 px-2 py-1.5 text-[10px] font-semibold text-red-200">Remove</button>
+                </div>`
+            : `<div class="mt-3 flex flex-wrap items-center gap-2">
                     <button type="button" data-df-pos-action="dec" data-order-id="${order.id}" data-item-id="${it.id}" class="min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-orange-700 bg-orange-950/60 text-xl font-bold leading-none text-orange-50 hover:bg-orange-900">−</button>
                     <span class="min-w-[2.25rem] text-center text-base font-semibold tabular-nums text-orange-50">${it.quantity}</span>
                     <button type="button" data-df-pos-action="inc" data-order-id="${order.id}" data-item-id="${it.id}" class="min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-orange-700 bg-orange-950/60 text-xl font-bold leading-none text-orange-50 hover:bg-orange-900">+</button>
                     <button type="button" data-df-pos-action="remove" data-order-id="${order.id}" data-item-id="${it.id}" class="ml-auto rounded-xl border border-red-900/60 bg-red-950/40 px-3 py-2 text-xs font-semibold text-red-200">Remove</button>
-                </div>`
-            : `<p class="mt-2 text-sm text-orange-600">Qty <span class="font-semibold text-orange-200">${it.quantity}</span></p>`;
+                </div>`;
+        const ctrls = editable ? qtyRow : `<p class="mt-2 text-sm text-orange-600">Qty <span class="font-semibold text-orange-200">${it.quantity}</span></p>`;
+
+        const nameCls = compact ? 'text-sm font-semibold leading-snug text-orange-50' : 'text-base font-semibold text-orange-50';
+        const priceCls = compact ? 'shrink-0 text-sm font-bold tabular-nums text-orange-100' : 'shrink-0 text-base font-bold tabular-nums text-orange-100';
+        const pad = compact ? 'p-2' : 'p-3';
+        const metaCls = compact ? 'mt-1 flex flex-wrap items-center gap-1.5 text-[9px]' : 'mt-1 flex flex-wrap items-center gap-2 text-[10px]';
+        const priceEachCls = compact ? 'mt-0.5 text-[10px] text-orange-700' : 'mt-0.5 text-xs text-orange-700';
 
         return `
-            <div class="rounded-lg border border-orange-950/40 bg-black/25 p-3" data-df-line="${it.id}">
-                <div class="flex flex-wrap items-start justify-between gap-2">
+            <div class="rounded-lg border border-orange-950/40 bg-black/25 ${pad}" data-df-line="${it.id}">
+                <div class="flex flex-wrap items-start justify-between gap-1.5">
                     <div class="min-w-0 flex-1">
-                        <p class="text-base font-semibold text-orange-50">${escapeHtml(it.name)}</p>
-                        <p class="mt-0.5 text-xs text-orange-700">¥${escapeHtml(it.price)} each</p>
-                        <div class="mt-1 flex flex-wrap items-center gap-2 text-[10px]">
-                            <span class="rounded-full border px-2 py-0.5 ${statusMeta.cls}">${statusMeta.label}</span>
-                            <span class="text-orange-500">Delivered ${deliveredQty}/${it.quantity}</span>
-                            <span class="text-orange-700">Remain ${remaining}</span>
+                        <p class="${nameCls}">${escapeHtml(it.name)}</p>
+                        <p class="${priceEachCls}">¥${escapeHtml(it.price)} each</p>
+                        <div class="${metaCls}">
+                            <span class="rounded-full border px-1.5 py-0.5 ${statusMeta.cls}">${statusMeta.label}</span>
+                            <span class="text-orange-500">Del ${deliveredQty}/${it.quantity}</span>
+                            <span class="text-orange-700">Rem ${remaining}</span>
                         </div>
                     </div>
-                    <p class="shrink-0 text-base font-bold tabular-nums text-orange-100">¥${escapeHtml(it.line_total)}</p>
+                    <p class="${priceCls}">¥${escapeHtml(it.line_total)}</p>
                 </div>
                 ${ctrls}
                 ${prepActions}
@@ -584,19 +600,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const kitchenItems = (order.items ?? []).filter((it) => it.is_kitchen === true);
         const nonKitchenItems = (order.items ?? []).filter((it) => it.is_kitchen !== true);
-        const renderItemGroup = (title, items) => items.length
-            ? `<div class="min-w-0 space-y-3 rounded-xl border border-orange-900/35 bg-black/15 p-3">
-                    <p class="text-[10px] font-semibold uppercase tracking-wider text-orange-700">${title}</p>
-                    ${(items ?? []).map((it) => renderLineItem(order, it, editable, { history: historyMode })).join('')}
-               </div>`
-            : '';
-        const lines = [
-            renderItemGroup('Kitchen Items', kitchenItems),
-            renderItemGroup('Non Kitchen Items', nonKitchenItems),
-        ].filter(Boolean).join('');
-        const linesLayout = lines
-            ? `<div class="grid grid-cols-1 gap-3 xl:grid-cols-2">${lines}</div>`
-            : '';
+        const twoColLayout = kitchenItems.length > 0 && nonKitchenItems.length > 0;
+
+        function renderItemColumn(title, variant, items, { alwaysShow = false } = {}) {
+            if (!alwaysShow && !items.length) {
+                return '';
+            }
+            const border =
+                variant === 'kitchen'
+                    ? 'border-amber-600/45 bg-gradient-to-b from-amber-950/25 to-black/15'
+                    : 'border-cyan-900/35 bg-gradient-to-b from-slate-900/35 to-black/15';
+            const head =
+                variant === 'kitchen'
+                    ? 'border-amber-700/30 text-amber-300/95'
+                    : 'border-cyan-800/25 text-cyan-200/90';
+            const emptyHint =
+                variant === 'kitchen'
+                    ? 'No kitchen (hot) items on this order.'
+                    : 'No bar, drinks, or other non-kitchen items.';
+            const inner =
+                items.length > 0
+                    ? items
+                          .map((it) =>
+                              renderLineItem(order, it, editable, {
+                                  history: historyMode,
+                                  compact: twoColLayout,
+                              }),
+                          )
+                          .join('')
+                    : `<p class="rounded-md border border-dashed border-orange-900/40 bg-black/20 px-2 py-3 text-center text-[10px] leading-snug text-orange-700/90">${emptyHint}</p>`;
+
+            return `<div class="df-drawer-item-col flex min-h-0 min-w-0 flex-col rounded-lg border ${border} p-2 sm:p-2.5">
+                    <p class="mb-2 shrink-0 border-b ${head} pb-1.5 text-[9px] font-bold uppercase tracking-wider">${title}</p>
+                    <div class="min-h-0 flex-1 space-y-2">${inner}</div>
+                </div>`;
+        }
+
+        let linesLayout = '';
+        if (twoColLayout) {
+            linesLayout = `<div class="df-order-split grid min-w-0 grid-cols-2 gap-2">
+                    ${renderItemColumn('Kitchen', 'kitchen', kitchenItems, { alwaysShow: true })}
+                    ${renderItemColumn('Non-kitchen', 'other', nonKitchenItems, { alwaysShow: true })}
+                </div>`;
+        } else {
+            const k = renderItemColumn('Kitchen', 'kitchen', kitchenItems, { alwaysShow: false });
+            const nk = renderItemColumn('Non-kitchen', 'other', nonKitchenItems, { alwaysShow: false });
+            linesLayout = [k, nk].filter(Boolean).join('<div class="mt-3"></div>');
+        }
         const readyCount = (order.items ?? []).filter((it) => String(it.preparation_status) === 'ready' && Number(it.remaining_quantity ?? 0) > 0).length;
 
         const totals = `
@@ -966,6 +1016,21 @@ document.addEventListener('DOMContentLoaded', () => {
             ? '<p class="mt-2 text-[11px] text-orange-700">Clear Session is only available when a guest opened the table but no order was placed.</p>'
             : '<p class="mt-2 text-[11px] text-orange-700">Use this when a guest scanned the QR and left without placing an order.</p>';
 
+        const markKitchenHtml =
+            pendingKitchen > 0
+                ? `<button type="button" data-df-mark-seen="kitchen" data-table-id="${panelData.table?.id}" class="rounded-lg border border-amber-700/70 bg-amber-950/30 px-2 py-2 text-center text-[11px] font-semibold text-amber-100 hover:bg-amber-900/50">Mark kitchen seen</button>`
+                : '';
+        const markNonHtml =
+            pendingNonKitchen > 0
+                ? `<button type="button" data-df-mark-seen="non_kitchen" data-table-id="${panelData.table?.id}" class="rounded-lg border border-cyan-800/60 bg-slate-950/40 px-2 py-2 text-center text-[11px] font-semibold text-cyan-100 hover:bg-slate-900/60">Mark non-kitchen seen</button>`
+                : '';
+        const markCells = [markKitchenHtml, markNonHtml].filter(Boolean);
+        const markGridClass = markCells.length === 2 ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-1 gap-2';
+        const markRow = markCells.length ? `<div class="mt-3 ${markGridClass} text-xs">${markCells.join('')}</div>` : '';
+        const billRow = billPreviewUrl
+            ? `<div class="mt-2"><a href="${billPreviewUrl}" target="_blank" rel="noopener" class="block rounded-lg border border-orange-700/70 px-2 py-2 text-center text-[11px] font-semibold text-orange-100 hover:bg-orange-950/60">Print bill preview</a></div>`
+            : '';
+
         return `
             <div class="sticky top-0 rounded-xl border ${sessionStateClass} p-3">
                 <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
@@ -979,11 +1044,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="text-[10px] uppercase tracking-wide text-amber-300/80">Running Total</span>
                     <p class="text-lg font-bold text-amber-200">¥${escapeHtml(String(runningTotal))}</p>
                 </div>
-                <div class="mt-3 grid grid-cols-1 gap-2 text-xs">
-                    ${pendingKitchen > 0 ? `<button type="button" data-df-mark-seen="kitchen" data-table-id="${panelData.table?.id}" class="rounded-lg border border-orange-700 px-2 py-2 text-center text-orange-100 hover:bg-orange-950">Mark Kitchen Seen</button>` : ''}
-                    ${pendingNonKitchen > 0 ? `<button type="button" data-df-mark-seen="non_kitchen" data-table-id="${panelData.table?.id}" class="rounded-lg border border-orange-700 px-2 py-2 text-center text-orange-100 hover:bg-orange-950">Mark Non-Kitchen Seen</button>` : ''}
-                    ${billPreviewUrl ? `<a href="${billPreviewUrl}" target="_blank" rel="noopener" class="rounded-lg border border-orange-700 px-2 py-2 text-center text-orange-100 hover:bg-orange-950">Print Bill Preview</a>` : ''}
-                </div>
+                ${markRow}
+                ${billRow}
                 <div class="mt-3 grid grid-cols-1 gap-2">${checkoutBtn}${clearBtn}</div>
                 ${helperText}
             </div>`;

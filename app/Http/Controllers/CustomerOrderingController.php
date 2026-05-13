@@ -5,8 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\OrderStatus;
 use App\Enums\SessionStatus;
 use App\Enums\TableStatus;
-use App\Events\CheckoutRequested;
-use App\Events\GuestSessionStarted;
 use App\Http\Requests\StartGuestSessionRequest;
 use App\Http\Requests\StoreCustomerOrderRequest;
 use App\Models\Category;
@@ -121,8 +119,6 @@ class CustomerOrderingController extends Controller
 
         $table->update(['status' => TableStatus::Occupied]);
         $session->refresh();
-
-        rescue(fn () => event(new GuestSessionStarted($table->fresh(), $count)), report: false);
 
         return redirect()->route('guest.menu');
     }
@@ -272,7 +268,6 @@ class CustomerOrderingController extends Controller
         $activeOrder->update(['checkout_requested_at' => now()]);
         $activeOrder->load('table');
         $customerSession->update(['last_seen_at' => now()]);
-        rescue(fn () => event(new CheckoutRequested($activeOrder)), report: false);
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -285,7 +280,7 @@ class CustomerOrderingController extends Controller
     }
 
     /**
-     * Full order summary page, or HTML fragment when partial=1 (for realtime refresh).
+     * Full order summary page, or HTML fragment when partial=1 (for polling refresh).
      */
     public function orderSummary(Request $request): View|RedirectResponse
     {

@@ -1,8 +1,7 @@
 /**
- * Guest menu: listen on public table.{id} channel for OrderUpdated (staff edited pending order).
+ * Guest menu: periodic refresh of the order summary panel (staff edits, checkout requests).
  */
-import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
+const GUEST_ORDER_POLL_MS = 5000;
 
 function meta(name) {
     return document.querySelector(`meta[name="${name}"]`)?.getAttribute('content') ?? '';
@@ -14,14 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!tableId || !summaryUrl) {
         return;
     }
-
-    const broadcastDriver = meta('guest-broadcast-driver') || 'null';
-    const reverbKey = meta('guest-reverb-key');
-    const reverbHost = meta('guest-reverb-host') || window.location.hostname;
-    const reverbPort = Number(meta('guest-reverb-port') || '8080');
-    const reverbScheme = (meta('guest-reverb-scheme') || 'http').toLowerCase();
-    const pusherKey = meta('guest-pusher-key');
-    const pusherCluster = meta('guest-pusher-cluster') || 'mt1';
 
     function refreshOrderPanel() {
         const url = summaryUrl.includes('?') ? `${summaryUrl}&partial=1` : `${summaryUrl}?partial=1`;
@@ -53,36 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(() => {});
     }
 
-    const channelName = `table.${tableId}`;
-
-    if (broadcastDriver === 'reverb' && reverbKey) {
-        window.Pusher = Pusher;
-        const forceTLS = reverbScheme === 'https';
-        window.Echo = new Echo({
-            broadcaster: 'reverb',
-            key: reverbKey,
-            wsHost: reverbHost,
-            wsPort: reverbPort,
-            wssPort: reverbPort,
-            forceTLS,
-            enabledTransports: ['ws', 'wss'],
-            disableStats: true,
-        });
-        const ch = window.Echo.channel(channelName);
-        ch.listen('.OrderUpdated', refreshOrderPanel);
-        ch.listen('.OrderPlaced', refreshOrderPanel);
-        ch.listen('.CheckoutRequested', refreshOrderPanel);
-    } else if (broadcastDriver === 'pusher' && pusherKey) {
-        window.Pusher = Pusher;
-        window.Echo = new Echo({
-            broadcaster: 'pusher',
-            key: pusherKey,
-            cluster: pusherCluster,
-            forceTLS: true,
-        });
-        const ch = window.Echo.channel(channelName);
-        ch.listen('.OrderUpdated', refreshOrderPanel);
-        ch.listen('.OrderPlaced', refreshOrderPanel);
-        ch.listen('.CheckoutRequested', refreshOrderPanel);
-    }
+    void refreshOrderPanel();
+    window.setInterval(refreshOrderPanel, GUEST_ORDER_POLL_MS);
 });

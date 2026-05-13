@@ -9,7 +9,7 @@
 
 ## Restaurant Management System
 
-Laravel 11 application with role-based access (Admin / Staff), live order broadcasting via **Laravel Reverb** (self-hosted WebSockets + Laravel Echo), PDF invoices (**barryvdh/laravel-dompdf**), Stripe Checkout for online payments, and a REST API (**Sanctum**). The dashboard floor plan uses realtime events (`OrderPlaced`, `CheckoutCompleted`) with optional HTTP polling fallback.
+Laravel 11 application with role-based access (Admin / Staff), PDF invoices (**barryvdh/laravel-dompdf**), Stripe Checkout for online payments, and a REST API (**Sanctum**). Staff dashboards use **HTTP polling** (with optional voice alerts) for order updates—no WebSockets or third-party push services.
 
 Installation and configuration: **[SETUP.md](SETUP.md)**.
 
@@ -25,7 +25,6 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 - Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
 - Database agnostic [schema migrations](https://laravel.com/docs/migrations).
 - [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 

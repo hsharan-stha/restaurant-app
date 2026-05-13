@@ -64,6 +64,60 @@ class DashboardTest extends TestCase
         $this->assertStringNotContainsString(route('menu-items.index'), $html);
     }
 
+    public function test_latest_orders_endpoint_requires_authentication(): void
+    {
+        $this->getJson('/api/latest-orders')->assertUnauthorized();
+    }
+
+    public function test_latest_orders_bootstrap_returns_empty_new_orders(): void
+    {
+        $user = User::factory()->create();
+        $staffRole = Role::query()->create(['name' => 'staff']);
+        $user->roles()->attach($staffRole);
+
+        $this->actingAs($user)
+            ->getJson('/api/latest-orders')
+            ->assertOk()
+            ->assertJsonPath('new_orders', [])
+            ->assertJsonStructure([
+                'latest_order_id',
+                'new_orders',
+                'recent_orders',
+                'live_order_count',
+                'pending_order_count',
+                'unread_count',
+            ]);
+    }
+
+    public function test_latest_orders_returns_new_pending_orders_after_reference_id(): void
+    {
+        $user = User::factory()->create();
+        $staffRole = Role::query()->create(['name' => 'staff']);
+        $user->roles()->attach($staffRole);
+
+        $table = DiningTable::query()->create([
+            'table_number' => 44,
+            'table_name' => 'Patio',
+            'status' => 'occupied',
+        ]);
+
+        $order = Order::query()->create([
+            'table_id' => $table->id,
+            'status' => OrderStatus::Pending,
+            'total_amount' => 12.00,
+            'ordered_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->getJson('/api/latest-orders?after_order_id='.($order->id - 1))
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $order->id,
+                'status' => OrderStatus::Pending->value,
+                'table_label' => 'Patio',
+            ]);
+    }
+
     public function test_dashboard_poll_announces_new_items_for_preparing_orders(): void
     {
         $user = User::factory()->create();

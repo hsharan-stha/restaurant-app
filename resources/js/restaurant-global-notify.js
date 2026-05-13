@@ -1,15 +1,11 @@
 /**
- * Global staff realtime: Laravel Echo (Reverb) + Web Speech API.
- * Loaded on authenticated admin layouts. One Echo connection per tab.
+ * Global staff alerts: Web Speech API + HTTP polling (dashboard poll + floor state).
  * Speech unlocks after first user gesture (browser policy); sessionStorage persists for the tab.
  */
-import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
 
 const SPEECH_TAB_KEY = 'restaurant-speech-unlocked';
 const PENDING_REPEAT_MS = 4000;
 const ORDER_SEEN_KEY = 'restaurant-dashboard-order-seen-v1';
-const ALERT_POLL_MS = 2000;
 
 function meta(name) {
     return document.querySelector(`meta[name="${name}"]`)?.getAttribute('content') ?? '';
@@ -55,13 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.__restaurantNotifyInit = true;
 
-    const broadcastDriver = meta('restaurant-broadcast-driver') || 'null';
-    const reverbKey = meta('restaurant-reverb-key');
-    const reverbHost = meta('restaurant-reverb-host') || window.location.hostname;
-    const reverbPort = Number(meta('restaurant-reverb-port') || '8080');
-    const reverbScheme = (meta('restaurant-reverb-scheme') || 'http').toLowerCase();
-    const pusherKey = meta('restaurant-pusher-key');
-    const pusherCluster = meta('restaurant-pusher-cluster') || 'mt1';
+    const alertPollMs = meta('restaurant-order-toast-poll') === '1' ? 6500 : 2000;
+    const skipVoiceForPlacedOrders = meta('restaurant-order-toast-poll') === '1';
+
     const floorStateUrl = meta('restaurant-floor-state-url');
     const dashboardPollUrl = `${window.location.origin}/dashboard/poll`;
 
@@ -236,9 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastSeenId = 0;
     let lastSeenOrderItemId = 0;
     let lastCheckoutSeenAt = '';
-    let liveConnectionActive = false;
-
-    /** After first floor snapshot, newly appearing pending tables get a voice alert (avoids blasting every pending row on first page load). */
     let pendingFloorMergePrimed = false;
 
     function applyUtteranceParams(utterance) {
@@ -365,24 +354,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return res.json();
     }
 
-    function setWsStatusBadge(mode) {
+    function setWsStatusBadge() {
         const el = document.getElementById('df-ws-status');
         if (!el) {
             return;
         }
-        liveConnectionActive = mode === 'live';
         const base =
             'rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide';
-        if (mode === 'live') {
-            el.textContent = 'Live';
-            el.className = `${base} border-emerald-800/60 bg-emerald-950/40 text-emerald-300`;
-        } else if (mode === 'connecting') {
-            el.textContent = '…';
-            el.className = `${base} border-orange-900/60 bg-black/30 text-orange-400`;
-        } else {
-            el.textContent = 'Poll';
-            el.className = `${base} border-orange-900/60 bg-black/30 text-orange-500`;
-        }
+        el.textContent = 'Poll';
+        el.className = `${base} border-orange-900/60 bg-black/30 text-orange-500`;
     }
 
     function reconcilePendingLoopTimer() {
@@ -474,21 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function bindEchoConnectionStatus() {
-        try {
-            const conn = window.Echo?.connector?.pusher?.connection;
-            if (!conn?.bind) {
-                return;
-            }
-            conn.bind('connected', () => setWsStatusBadge('live'));
-            conn.bind('disconnected', () => setWsStatusBadge('poll'));
-            conn.bind('unavailable', () => setWsStatusBadge('poll'));
-            conn.bind('failed', () => setWsStatusBadge('poll'));
-        } catch {
-            /* ignore */
-        }
-    }
-
     function onOrderPlaced(payload) {
         const tid = Number(payload?.table_id);
         const oid = Number(payload?.order_id ?? payload?.id ?? 0);
@@ -567,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function pollForFallbackAlerts() {
-        if (liveConnectionActive || fallbackPollInFlight) {
+        if (fallbackPollInFlight) {
             return;
         }
 
@@ -597,6 +562,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (id > lastSeenId) {
                     lastSeenId = id;
                 }
+                if (skipVoiceForPlacedOrders && order?.type === 'new_order') {
+                    return;
+                }
                 onOrderPlaced({
                     id,
                     order_id: id,
@@ -615,10 +583,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initializeFallbackAlertBaseline() {
-        if (liveConnectionActive) {
-            return;
-        }
-
         try {
             const url = new URL(dashboardPollUrl);
             url.searchParams.set('last_seen_id', '999999999');
@@ -668,50 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reconcilePendingLoopTimer();
     });
 
-    if (broadcastDriver === 'reverb' && reverbKey) {
-        setWsStatusBadge('connecting');
-        window.Pusher = Pusher;
-        const forceTLS = reverbScheme === 'https';
-        window.Echo = new Echo({
-            broadcaster: 'reverb',
-            key: reverbKey,
-            wsHost: reverbHost,
-            wsPort: reverbPort,
-            wssPort: reverbPort,
-            forceTLS,
-            enabledTransports: ['ws', 'wss'],
-            disableStats: true,
-        });
-        bindEchoConnectionStatus();
-        const dash = window.Echo.channel('dashboard');
-        dash.listen('.OrderPlaced', onOrderPlaced);
-        dash.listen('.OrderPreparing', onOrderPreparing);
-        dash.listen('.OrderCompleted', onOrderCompleted);
-        dash.listen('.CheckoutCompleted', onCheckoutCompleted);
-        dash.listen('.OrderUpdated', onOrderUpdated);
-        dash.listen('.CheckoutRequested', onCheckoutRequested);
-        dash.listen('.GuestSessionStarted', dispatchFloorRefresh);
-    } else if (broadcastDriver === 'pusher' && pusherKey) {
-        setWsStatusBadge('connecting');
-        window.Pusher = Pusher;
-        window.Echo = new Echo({
-            broadcaster: 'pusher',
-            key: pusherKey,
-            cluster: pusherCluster,
-            forceTLS: true,
-        });
-        bindEchoConnectionStatus();
-        const dash = window.Echo.channel('dashboard');
-        dash.listen('.OrderPlaced', onOrderPlaced);
-        dash.listen('.OrderPreparing', onOrderPreparing);
-        dash.listen('.OrderCompleted', onOrderCompleted);
-        dash.listen('.CheckoutCompleted', onCheckoutCompleted);
-        dash.listen('.OrderUpdated', onOrderUpdated);
-        dash.listen('.CheckoutRequested', onCheckoutRequested);
-        dash.listen('.GuestSessionStarted', dispatchFloorRefresh);
-    } else {
-        setWsStatusBadge('poll');
-    }
+    setWsStatusBadge();
 
     if (window.speechSynthesis) {
         window.speechSynthesis.addEventListener('voiceschanged', () => {});
@@ -724,7 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 12000);
     window.setInterval(() => {
         void pollForFallbackAlerts();
-    }, ALERT_POLL_MS);
+    }, alertPollMs);
 
     document.getElementById('df-test-sound')?.addEventListener('click', async () => {
         unlockSpeechFromGesture();

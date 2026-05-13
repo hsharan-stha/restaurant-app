@@ -23,7 +23,7 @@
                 <span
                     id="df-ws-status"
                     class="rounded-full border border-orange-900/60 bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-400"
-                    title="Realtime connection"
+                    title="HTTP polling (no WebSocket)"
                 >Poll</span>
                 <div class="relative" id="df-actions-menu-wrap">
                     <button
@@ -124,24 +124,24 @@
 
             <aside
                 id="df-drawer"
-                class="fixed bottom-0 right-0 top-[var(--df-toolbar-h,120px)] z-50 flex w-full max-w-[760px] translate-x-full flex-col border-l border-orange-900/60 bg-[#120906] shadow-2xl transition-transform duration-300 ease-out"
+                class="fixed bottom-0 right-0 top-[var(--df-toolbar-h,120px)] z-50 flex w-full max-w-[min(100%,24rem)] translate-x-full flex-col border-l border-orange-900/60 bg-[#120906] shadow-2xl transition-transform duration-300 ease-out sm:max-w-[26rem] lg:max-w-[28rem]"
                 aria-hidden="true"
             >
-                <div class="flex items-start justify-between gap-3 border-b border-orange-950/50 px-4 py-4">
-                    <div>
+                <div class="flex items-start justify-between gap-2 border-b border-orange-950/50 px-3 py-3 sm:gap-3 sm:px-4 sm:py-3.5">
+                    <div class="min-w-0 flex-1">
                         <p class="text-[10px] font-semibold uppercase tracking-[0.25em] text-orange-900">Table</p>
-                        <h2 id="df-drawer-title" class="mt-1 text-lg font-semibold text-orange-50">—</h2>
+                        <h2 id="df-drawer-title" class="mt-0.5 truncate text-base font-semibold text-orange-50 sm:text-lg">—</h2>
                         <p id="df-drawer-meta" class="mt-1 text-xs text-orange-700"></p>
                     </div>
-                    <button type="button" id="df-drawer-close" class="rounded-lg border border-orange-800 px-3 py-1.5 text-sm text-orange-200 hover:bg-orange-950">✕</button>
+                    <button type="button" id="df-drawer-close" class="shrink-0 rounded-lg border border-orange-800 px-2.5 py-1.5 text-sm text-orange-200 hover:bg-orange-950 sm:px-3">✕</button>
                 </div>
 
-                <div id="df-drawer-empty" class="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-center text-sm text-orange-900">
+                <div id="df-drawer-empty" class="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-10 text-center text-sm text-orange-900 sm:px-6 sm:py-12">
                     <p>Select a table on the floor plan</p>
                 </div>
 
                 <div id="df-drawer-body" class="hidden flex-1 flex-col overflow-hidden">
-                    <div class="flex-1 overflow-y-auto px-4 py-4">
+                    <div class="flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
                         <section class="mb-6">
                             <p class="text-[10px] font-semibold uppercase tracking-wider text-orange-900">Dining session actions</p>
                             <div id="df-session-actions" class="mt-2"></div>

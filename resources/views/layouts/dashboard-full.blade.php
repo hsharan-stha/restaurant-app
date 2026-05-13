@@ -7,8 +7,10 @@
     <title>@yield('title', 'Dashboard') - {{ config('app.name', 'Restaurant OS') }}</title>
     @auth
         @include('components.restaurant-notify-meta')
+        <meta name="restaurant-order-toast-poll" content="1">
+        <meta name="restaurant-api-latest-orders-url" content="{{ url('/api/latest-orders') }}">
     @endauth
-    @vite(['resources/css/app.css', 'resources/js/restaurant-global-notify.js', 'resources/js/dashboard-floor.js'])
+    @vite(['resources/css/app.css', 'resources/js/restaurant-global-notify.js', 'resources/js/dashboard-floor.js', 'resources/js/dashboard-order-poll.js'])
 </head>
 <body class="restaurant-dashboard-theme min-h-screen overflow-hidden antialiased">
     @if(session('status'))

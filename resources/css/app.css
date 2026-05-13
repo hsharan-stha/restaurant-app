@@ -32,6 +32,29 @@
     animation: order-row-recent-red 0.8s ease-in-out 6;
 }
 
+/* Dashboard drawer: kitchen / non-kitchen columns share width without overflow */
+.restaurant-dashboard-theme .df-order-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+@keyframes dfToastIn {
+    from {
+        opacity: 0;
+        transform: translateX(14px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes dfToastOut {
+    to {
+        opacity: 0;
+        transform: translateX(12px) scale(0.96);
+    }
+}
+
 .restaurant-dashboard-theme {
     background:
         radial-gradient(circle at top left, rgba(251, 191, 36, 0.14), transparent 30%),
