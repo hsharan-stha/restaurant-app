@@ -15,6 +15,7 @@ use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Repositories\Contracts\OrderRepositoryInterface;
+use App\Services\Printing\OrderPrintDispatcher;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
@@ -22,6 +23,7 @@ class OrderService
     public function __construct(
         protected OrderRepositoryInterface $orderRepository,
         protected DiningSessionService $diningSessionService,
+        protected OrderPrintDispatcher $orderPrintDispatcher,
     ) {}
 
     /**
@@ -109,6 +111,11 @@ class OrderService
             $table->update(['status' => TableStatus::Occupied]);
 
             $order->load(['table', 'items.menuItem']);
+
+            $orderId = (int) $order->id;
+            DB::afterCommit(function () use ($orderId): void {
+                $this->orderPrintDispatcher->queueForOrder($orderId);
+            });
 
             return $order;
         });
@@ -467,6 +474,11 @@ class OrderService
             if ($order->diningSession) {
                 $this->diningSessionService->syncProgressStatus($order->diningSession);
             }
+
+            $orderId = (int) $order->id;
+            DB::afterCommit(function () use ($orderId): void {
+                $this->orderPrintDispatcher->queueForOrder($orderId);
+            });
 
             return $order;
         });

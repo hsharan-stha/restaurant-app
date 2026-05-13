@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Admin\CatalogCategoryApiController;
 use App\Http\Controllers\Admin\CatalogMenuItemApiController;
+use App\Http\Controllers\Admin\PrintLogController;
+use App\Http\Controllers\Admin\PrinterController;
+use App\Http\Controllers\Admin\PrintSettingController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerOrderingController;
@@ -97,6 +100,17 @@ Route::middleware('auth')->group(function () {
         Route::resource('categories', CategoryController::class)->except(['show']);
         Route::resource('menu-items', MenuItemController::class)->except(['show']);
         Route::resource('dining-tables', DiningTableController::class)->except(['show', 'index']);
+
+        Route::prefix('admin/printing')->name('admin.printing.')->group(function (): void {
+            Route::get('settings', [PrintSettingController::class, 'edit'])->name('settings.edit');
+            Route::put('settings', [PrintSettingController::class, 'update'])->name('settings.update');
+            Route::get('logs', [PrintLogController::class, 'index'])->name('logs.index');
+            Route::post('logs/{printLog}/retry', [PrintLogController::class, 'retry'])->name('logs.retry');
+            Route::post('logs/{printLog}/reprint', [PrintLogController::class, 'reprint'])->name('logs.reprint');
+            Route::get('printers/{printer}/status', [PrinterController::class, 'status'])->name('printers.status');
+            Route::post('printers/{printer}/test-print', [PrinterController::class, 'testPrint'])->name('printers.test-print');
+            Route::resource('printers', PrinterController::class)->except(['show']);
+        });
     });
 
     Route::middleware('role:admin,staff')->group(function () {

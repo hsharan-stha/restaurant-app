@@ -81,6 +81,16 @@
                                 class="block px-3 py-1.5 text-xs text-orange-200 hover:bg-orange-950/80"
                             >Menu items</a>
                             <a
+                                href="{{ route('admin.printing.printers.index') }}"
+                                role="menuitem"
+                                class="block px-3 py-1.5 text-xs text-orange-200 hover:bg-orange-950/80"
+                            >Thermal printers</a>
+                            <a
+                                href="{{ route('admin.printing.settings.edit') }}"
+                                role="menuitem"
+                                class="block px-3 py-1.5 text-xs text-orange-200 hover:bg-orange-950/80"
+                            >Print settings</a>
+                            <a
                                 href="{{ route('categories.index') }}"
                                 role="menuitem"
                                 class="block px-3 py-1.5 text-xs text-orange-200 hover:bg-orange-950/80"

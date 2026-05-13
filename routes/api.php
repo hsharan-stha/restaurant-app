@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\DiningSessionApiController;
 use App\Http\Controllers\Api\MenuApiController;
 use App\Http\Controllers\Api\OrderApiController;
 use App\Http\Controllers\Api\PaymentApiController;
+use App\Http\Controllers\Api\PrintingApiController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/token', [AuthTokenController::class, 'store']);
@@ -12,6 +13,9 @@ Route::post('/auth/token', [AuthTokenController::class, 'store']);
 Route::get('/menu', [MenuApiController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/printing/printers', [PrintingApiController::class, 'printers']);
+    Route::get('/printing/printers/{printer}/status', [PrintingApiController::class, 'printerStatus']);
+
     Route::get('/orders', [OrderApiController::class, 'index']);
     Route::post('/orders', [OrderApiController::class, 'store']);
     Route::patch('/orders/{order}/status', [OrderApiController::class, 'updateStatus']);

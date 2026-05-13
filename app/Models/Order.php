@@ -64,4 +64,9 @@ class Order extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function printLogs(): HasMany
+    {
+        return $this->hasMany(PrintLog::class);
+    }
 }
